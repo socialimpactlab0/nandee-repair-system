@@ -92,7 +92,7 @@
 
     <section id="tab-admin" class="card hidden">
       <h2>管理更新</h2>
-      <div class="hint">先輸入管理密碼，再選擇要看的狀態。點選案件後，系統會自動帶入原本的狀態、負責人、預定完成日與備註。</div>
+      <div class="hint">先輸入管理密碼，再選擇要看的狀態。點選案件後，系統會自動帶入原本資料；若原本是「待處理」，會自動改成「處理中」。</div>
       <form id="adminForm">
         <label>管理密碼</label>
         <input type="password" name="password" id="adminPassword" required placeholder="請輸入管理密碼">
@@ -231,9 +231,25 @@
       const password = document.getElementById('adminPassword').value.trim();
       const status = document.getElementById('adminListStatus').value;
       if (!password) { showResult('adminListResult', '請先輸入管理密碼。', 'error'); return; }
+      clearAdminSelection();
       showResult('adminListResult', '案件讀取中...', 'success');
       const url = GAS_WEBAPP_URL + '?action=listRepairs&password=' + encodeURIComponent(password) + '&status=' + encodeURIComponent(status);
       jsonpRequest('adminListResult', url, renderAdminListResult);
+    }
+
+    function clearAdminSelection() {
+      adminRepairCache = [];
+      document.getElementById('adminCaseId').value = '';
+      document.getElementById('adminStatus').value = '待處理';
+      document.getElementById('adminOwner').value = '';
+      document.getElementById('adminDueDate').value = '';
+      document.getElementById('adminNote').value = '';
+      const selectedInfo = document.getElementById('adminSelectedInfo');
+      selectedInfo.innerHTML = '';
+      selectedInfo.style.display = 'none';
+      const adminResult = document.getElementById('adminResult');
+      adminResult.innerHTML = '';
+      adminResult.style.display = 'none';
     }
 
     function jsonpRequest(resultBoxId, baseUrl, callback) {
@@ -278,13 +294,15 @@
     function selectAdminCase(index) {
       const item = adminRepairCache[index];
       if (!item) return;
+      const originalStatus = item['狀態'] || '待處理';
+      const nextStatus = originalStatus === '待處理' ? '處理中' : originalStatus;
       document.getElementById('adminCaseId').value = item['報修編號'] || '';
-      document.getElementById('adminStatus').value = item['狀態'] || '處理中';
+      document.getElementById('adminStatus').value = nextStatus;
       document.getElementById('adminOwner').value = item['負責人'] || '';
       document.getElementById('adminDueDate').value = toDateInputValue(item['預定完成日'] || '');
       document.getElementById('adminNote').value = item['備註'] || '';
       const selectedInfo = document.getElementById('adminSelectedInfo');
-      selectedInfo.innerHTML = `<strong>已選擇案件：</strong>${escapeHtml(item['報修編號'])}<br><strong>地點：</strong>${escapeHtml(item['地點'])}<br><strong>問題：</strong>${escapeHtml(item['問題說明'])}`;
+      selectedInfo.innerHTML = `<strong>已選擇案件：</strong>${escapeHtml(item['報修編號'])}<br><strong>地點：</strong>${escapeHtml(item['地點'])}<br><strong>問題：</strong>${escapeHtml(item['問題說明'])}<br><strong>原本狀態：</strong>${escapeHtml(originalStatus)}<br><strong>準備更新狀態：</strong>${escapeHtml(nextStatus)}`;
       selectedInfo.style.display = 'block';
       document.getElementById('adminCaseId').scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
@@ -317,7 +335,8 @@
       showResult('adminResult', '更新中，請稍候...', 'success');
       try {
         await fetch(GAS_WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: params });
-        showResult('adminResult', '已送出更新。可再按「列出案件」確認狀態。', 'success');
+        showResult('adminResult', '已送出更新。系統會重新整理案件列表。', 'success');
+        setTimeout(loadAdminRepairs, 900);
       } catch (error) { showResult('adminResult', '更新失敗，請稍後再試。', 'error'); }
       submitBtn.disabled = false; submitBtn.innerText = '更新狀態';
     });
