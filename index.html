@@ -91,8 +91,11 @@
 
     <section id="tab-query" class="card hidden">
       <h2>查詢進度</h2>
-      <label>輸入報修編號、姓名或地點</label>
-      <input type="text" id="queryKeyword" placeholder="例如：R20260529、王小明、一樓洗手台">
+      <label>報修編號，選填</label>
+      <input type="text" id="queryCaseId" placeholder="例如：R20260529">
+      <label>姓名，選填</label>
+      <input type="text" id="queryName" placeholder="例如：王小明">
+      <div class="hint">報修編號或姓名，填其中一個就可以查詢。</div>
       <button class="btn" onclick="queryRepair()">查詢</button>
       <div id="queryResult" class="result"></div>
     </section>
@@ -177,11 +180,7 @@
       const file = this.files[0];
       const preview = document.getElementById('photoPreview');
       const img = document.getElementById('photoPreviewImg');
-      if (!file) {
-        preview.style.display = 'none';
-        img.src = '';
-        return;
-      }
+      if (!file) { preview.style.display = 'none'; img.src = ''; return; }
       const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
         alert('圖片太大，請選擇 5MB 以下的照片。');
@@ -210,17 +209,14 @@
         showResult('createResult', '尚未設定 GAS Web App 網址。', 'error');
         return;
       }
-
       const submitBtn = document.getElementById('submitRepairBtn');
       submitBtn.disabled = true;
       submitBtn.innerText = '送出中...';
-
       const caseId = generateCaseId();
       const params = formToParams(this);
       params.append('action', 'create');
       params.append('caseId', caseId);
       showResult('createResult', '報修資料送出中，請稍候...', 'success');
-
       try {
         const photoFile = document.getElementById('photoFile').files[0];
         if (photoFile) {
@@ -236,23 +232,23 @@
           params.append('photoName', photo.name);
           params.append('photoType', photo.type);
         }
-
         await fetch(GAS_WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: params });
-        showResult('createResult', `<strong>報修已送出。</strong><br>報修編號：<strong>${caseId}</strong><br>目前狀態：待處理<br><br>請先記下報修編號，之後可用它查詢進度。`, 'success');
+        showResult('createResult', `<strong>報修已送出。</strong><br>報修編號：<strong>${caseId}</strong><br>目前狀態：待處理<br><br>請先記下報修編號，之後可用姓名或報修編號查詢進度。`, 'success');
         this.reset();
         document.getElementById('photoPreview').style.display = 'none';
         document.getElementById('photoPreviewImg').src = '';
       } catch (error) {
         showResult('createResult', '送出失敗，請稍後再試。', 'error');
       }
-
       submitBtn.disabled = false;
       submitBtn.innerText = '送出報修';
     });
 
     function queryRepair() {
-      const keyword = document.getElementById('queryKeyword').value.trim();
-      if (!keyword) { showResult('queryResult', '請輸入報修編號、姓名或地點。', 'error'); return; }
+      const caseId = document.getElementById('queryCaseId').value.trim();
+      const name = document.getElementById('queryName').value.trim();
+      const keyword = caseId || name;
+      if (!keyword) { showResult('queryResult', '請至少輸入報修編號或姓名其中一項。', 'error'); return; }
       if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes('請貼上')) { showResult('queryResult', '尚未設定 GAS Web App 網址。', 'error'); return; }
       showResult('queryResult', '查詢中，請稍候...', 'success');
       const callbackName = 'handleQuery_' + Date.now();
@@ -268,13 +264,10 @@
       const box = document.getElementById('queryResult');
       if (!data.success) { showResult('queryResult', data.message || '查詢失敗。', 'error'); return; }
       if (!data.results || data.results.length === 0) { showResult('queryResult', '查無資料。', 'error'); return; }
-
       let html = `<strong>共找到 ${data.count} 筆資料</strong>`;
       data.results.forEach(item => {
         const statusClass = getStatusClass(item['狀態']);
-        const photoHtml = item['照片連結']
-          ? `<div class="row"><strong>照片：</strong><a href="${escapeAttr(item['照片連結'])}" target="_blank" rel="noopener">查看照片</a></div>`
-          : `<div class="row"><strong>照片：</strong>-</div>`;
+        const photoHtml = item['照片連結'] ? `<div class="row"><strong>照片：</strong><a href="${escapeAttr(item['照片連結'])}" target="_blank" rel="noopener">查看照片</a></div>` : `<div class="row"><strong>照片：</strong>-</div>`;
         html += `<div class="repair-item"><div class="repair-id">${escapeHtml(item['報修編號'])}</div><div class="status ${statusClass}">${escapeHtml(item['狀態'] || '待處理')}</div><div class="row"><strong>建立時間：</strong>${escapeHtml(item['建立時間'])}</div><div class="row"><strong>姓名：</strong>${escapeHtml(item['姓名'])}</div><div class="row"><strong>地點：</strong>${escapeHtml(item['地點'])}</div><div class="row"><strong>問題類型：</strong>${escapeHtml(item['問題類型'])}</div><div class="row"><strong>問題說明：</strong>${escapeHtml(item['問題說明'])}</div>${photoHtml}<div class="row"><strong>負責人：</strong>${escapeHtml(item['負責人'] || '-')}</div><div class="row"><strong>預定完成日：</strong>${escapeHtml(item['預定完成日'] || '-')}</div><div class="row"><strong>備註：</strong>${escapeHtml(item['備註'] || '-')}</div><div class="row"><strong>完成時間：</strong>${escapeHtml(item['完成時間'] || '-')}</div></div>`;
       });
       box.innerHTML = html;
