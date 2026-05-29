@@ -23,6 +23,7 @@
     .btn { width: 100%; margin-top: 20px; border: 0; padding: 14px 18px; border-radius: 12px; background: #1f4e79; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
     .btn.secondary { background: #555; }
     .btn:disabled { opacity: 0.65; cursor: not-allowed; }
+    .mini-btn { width: auto; margin-top: 10px; padding: 9px 14px; font-size: 15px; border-radius: 10px; }
     .result { margin-top: 18px; padding: 14px; border-radius: 12px; background: #eef6ff; line-height: 1.7; display: none; }
     .result.success { background: #eaf7ea; border-left: 5px solid #3c9d40; }
     .result.error { background: #fff0f0; border-left: 5px solid #d33; }
@@ -39,7 +40,7 @@
     a { color: #1f4e79; font-weight: bold; }
     .photo-preview { margin-top: 10px; display: none; }
     .photo-preview img { max-width: 100%; max-height: 260px; border-radius: 12px; border: 1px solid #ddd; display: block; }
-    .mini-btn { width: auto; margin-top: 10px; padding: 9px 14px; font-size: 15px; border-radius: 10px; }
+    .admin-selected { background: #fff8e1; border-left: 5px solid #f6b400; padding: 12px; border-radius: 12px; margin-top: 14px; line-height: 1.7; display: none; }
     @media (max-width: 600px) { .hero h1 { font-size: 24px; } .card { padding: 18px; } .tab-btn { flex: 1; font-size: 15px; } }
   </style>
 </head>
@@ -91,15 +92,24 @@
 
     <section id="tab-admin" class="card hidden">
       <h2>管理更新</h2>
-      <div class="hint">先輸入管理密碼，按「列出待處理案件」，再點選案件，系統會自動帶入報修編號。</div>
+      <div class="hint">先輸入管理密碼，再選擇要看的狀態。點選案件後，系統會自動帶入原本的狀態、負責人、預定完成日與備註。</div>
       <form id="adminForm">
         <label>管理密碼</label>
         <input type="password" name="password" id="adminPassword" required placeholder="請輸入管理密碼">
-        <button type="button" class="btn" onclick="loadPendingRepairs()">列出待處理案件</button>
-        <div id="adminPendingResult" class="result"></div>
+        <label>案件狀態篩選</label>
+        <select id="adminListStatus">
+          <option value="待處理">待處理</option>
+          <option value="處理中">處理中</option>
+          <option value="暫緩">暫緩</option>
+          <option value="已完成">已完成</option>
+          <option value="全部">全部案件</option>
+        </select>
+        <button type="button" class="btn" onclick="loadAdminRepairs()">列出案件</button>
+        <div id="adminListResult" class="result"></div>
+        <div id="adminSelectedInfo" class="admin-selected"></div>
 
         <label>報修編號</label>
-        <input type="text" name="caseId" id="adminCaseId" required placeholder="可從上方待處理案件點選帶入">
+        <input type="text" name="caseId" id="adminCaseId" required placeholder="可從上方案件點選帶入">
         <label>狀態</label>
         <select name="status" id="adminStatus" required>
           <option value="待處理">待處理</option><option value="處理中">處理中</option><option value="已完成">已完成</option><option value="暫緩">暫緩</option>
@@ -120,6 +130,7 @@
 
   <script>
     const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwZGtu0iZI4AavFB39zEygscZorsvTIdnniu2EJqHiKjo76A5WQ3G32F8M7O5M1Nfdqcw/exec';
+    let adminRepairCache = [];
 
     function showTab(tabName) {
       document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -216,11 +227,13 @@
       jsonpRequest('queryResult', GAS_WEBAPP_URL + '?action=query&keyword=' + encodeURIComponent(keyword), renderQueryResult);
     }
 
-    function loadPendingRepairs() {
+    function loadAdminRepairs() {
       const password = document.getElementById('adminPassword').value.trim();
-      if (!password) { showResult('adminPendingResult', '請先輸入管理密碼。', 'error'); return; }
-      showResult('adminPendingResult', '待處理案件讀取中...', 'success');
-      jsonpRequest('adminPendingResult', GAS_WEBAPP_URL + '?action=listPending&password=' + encodeURIComponent(password), renderPendingResult);
+      const status = document.getElementById('adminListStatus').value;
+      if (!password) { showResult('adminListResult', '請先輸入管理密碼。', 'error'); return; }
+      showResult('adminListResult', '案件讀取中...', 'success');
+      const url = GAS_WEBAPP_URL + '?action=listRepairs&password=' + encodeURIComponent(password) + '&status=' + encodeURIComponent(status);
+      jsonpRequest('adminListResult', url, renderAdminListResult);
     }
 
     function jsonpRequest(resultBoxId, baseUrl, callback) {
@@ -241,29 +254,49 @@
       box.className = 'result success'; box.style.display = 'block';
     }
 
-    function renderPendingResult(data) {
-      const box = document.getElementById('adminPendingResult');
-      if (!data.success) { showResult('adminPendingResult', data.message || '讀取失敗。', 'error'); return; }
-      if (!data.results || data.results.length === 0) { showResult('adminPendingResult', '目前沒有待處理案件。', 'success'); return; }
-      box.innerHTML = buildRepairListHtml(data.results, `目前待處理案件：${data.count} 筆`, true);
+    function renderAdminListResult(data) {
+      const box = document.getElementById('adminListResult');
+      if (!data.success) { showResult('adminListResult', data.message || '讀取失敗。', 'error'); return; }
+      adminRepairCache = data.results || [];
+      if (adminRepairCache.length === 0) { showResult('adminListResult', '目前沒有符合條件的案件。', 'success'); return; }
+      const statusText = document.getElementById('adminListStatus').value;
+      box.innerHTML = buildRepairListHtml(adminRepairCache, `${statusText}：${data.count} 筆`, true);
       box.className = 'result success'; box.style.display = 'block';
     }
 
     function buildRepairListHtml(results, title, adminSelect) {
       let html = `<strong>${title}</strong>`;
-      results.forEach(item => {
+      results.forEach((item, index) => {
         const statusClass = getStatusClass(item['狀態']);
         const photoHtml = item['照片連結'] ? `<div class="row"><strong>照片：</strong><a href="${escapeAttr(item['照片連結'])}" target="_blank" rel="noopener">查看照片</a></div>` : `<div class="row"><strong>照片：</strong>-</div>`;
-        const selectBtn = adminSelect ? `<button type="button" class="btn mini-btn" onclick="selectAdminCase('${escapeAttr(item['報修編號'])}')">選擇此案件</button>` : '';
+        const selectBtn = adminSelect ? `<button type="button" class="btn mini-btn" onclick="selectAdminCase(${index})">選擇此案件</button>` : '';
         html += `<div class="repair-item"><div class="repair-id">${escapeHtml(item['報修編號'])}</div><div class="status ${statusClass}">${escapeHtml(item['狀態'] || '待處理')}</div><div class="row"><strong>建立時間：</strong>${escapeHtml(item['建立時間'])}</div><div class="row"><strong>姓名：</strong>${escapeHtml(item['姓名'])}</div><div class="row"><strong>地點：</strong>${escapeHtml(item['地點'])}</div><div class="row"><strong>問題類型：</strong>${escapeHtml(item['問題類型'])}</div><div class="row"><strong>問題說明：</strong>${escapeHtml(item['問題說明'])}</div>${photoHtml}<div class="row"><strong>負責人：</strong>${escapeHtml(item['負責人'] || '-')}</div><div class="row"><strong>預定完成日：</strong>${escapeHtml(item['預定完成日'] || '-')}</div><div class="row"><strong>備註：</strong>${escapeHtml(item['備註'] || '-')}</div><div class="row"><strong>完成時間：</strong>${escapeHtml(item['完成時間'] || '-')}</div>${selectBtn}</div>`;
       });
       return html;
     }
 
-    function selectAdminCase(caseId) {
-      document.getElementById('adminCaseId').value = caseId;
-      document.getElementById('adminStatus').value = '處理中';
+    function selectAdminCase(index) {
+      const item = adminRepairCache[index];
+      if (!item) return;
+      document.getElementById('adminCaseId').value = item['報修編號'] || '';
+      document.getElementById('adminStatus').value = item['狀態'] || '處理中';
+      document.getElementById('adminOwner').value = item['負責人'] || '';
+      document.getElementById('adminDueDate').value = toDateInputValue(item['預定完成日'] || '');
+      document.getElementById('adminNote').value = item['備註'] || '';
+      const selectedInfo = document.getElementById('adminSelectedInfo');
+      selectedInfo.innerHTML = `<strong>已選擇案件：</strong>${escapeHtml(item['報修編號'])}<br><strong>地點：</strong>${escapeHtml(item['地點'])}<br><strong>問題：</strong>${escapeHtml(item['問題說明'])}`;
+      selectedInfo.style.display = 'block';
       document.getElementById('adminCaseId').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function toDateInputValue(value) {
+      if (!value) return '';
+      const text = String(value).trim();
+      const matchSlash = text.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+      if (matchSlash) return `${matchSlash[1]}-${String(matchSlash[2]).padStart(2, '0')}-${String(matchSlash[3]).padStart(2, '0')}`;
+      const matchDash = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (matchDash) return `${matchDash[1]}-${String(matchDash[2]).padStart(2, '0')}-${String(matchDash[3]).padStart(2, '0')}`;
+      return '';
     }
 
     function getStatusClass(status) {
@@ -284,7 +317,7 @@
       showResult('adminResult', '更新中，請稍候...', 'success');
       try {
         await fetch(GAS_WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: params });
-        showResult('adminResult', '已送出更新。可再按「列出待處理案件」確認案件是否已更新。', 'success');
+        showResult('adminResult', '已送出更新。可再按「列出案件」確認狀態。', 'success');
       } catch (error) { showResult('adminResult', '更新失敗，請稍後再試。', 'error'); }
       submitBtn.disabled = false; submitBtn.innerText = '更新狀態';
     });
