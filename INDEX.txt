@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>內部報修系統</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Microsoft JhengHei", Arial, sans-serif;
+      background: #f3f5f7;
+      color: #222;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px 16px 60px;
+    }
+
+    .hero {
+      background: #1f4e79;
+      color: white;
+      padding: 28px 22px;
+      border-radius: 16px;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+    }
+
+    .hero p {
+      margin: 0;
+      line-height: 1.7;
+      opacity: 0.95;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      border: 0;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: white;
+      cursor: pointer;
+      font-size: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .tab-btn.active {
+      background: #1f4e79;
+      color: white;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.08);
+      margin-bottom: 18px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 22px;
+      color: #1f4e79;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 14px 0 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #ccd3dc;
+      font-size: 16px;
+      background: #fff;
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .hint {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-top: 6px;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 20px;
+      border: 0;
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: #1f4e79;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn.secondary {
+      background: #555;
+    }
+
+    .result {
+      margin-top: 18px;
+      padding: 14px;
+      border-radius: 12px;
+      background: #eef6ff;
+      line-height: 1.7;
+      display: none;
+    }
+
+    .result.success {
+      background: #eaf7ea;
+      border-left: 5px solid #3c9d40;
+    }
+
+    .result.error {
+      background: #fff0f0;
+      border-left: 5px solid #d33;
+    }
+
+    .repair-item {
+      border: 1px solid #d9e1ea;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 12px;
+      background: #fff;
+    }
+
+    .repair-id {
+      font-weight: bold;
+      color: #1f4e79;
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #eee;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .status.waiting {
+      background: #fff2cc;
+    }
+
+    .status.doing {
+      background: #d9eaf7;
+    }
+
+    .status.done {
+      background: #d9ead3;
+    }
+
+    .status.hold {
+      background: #eadcf8;
+    }
+
+    .row {
+      line-height: 1.8;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .footer-note {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-top: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 {
+        font-size: 24px;
+      }
+
+      .card {
+        padding: 18px;
+      }
+
+      .tab-btn {
+        flex: 1;
+        font-size: 15px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <h1>內部報修系統</h1>
+      <p>
+        請簡單填寫報修內容，送出後會產生報修編號。<br>
+        如為漏水、用電危險、設備停機等急件，請同時電話通知負責人。
+      </p>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="showTab('create')">我要報修</button>
+      <button class="tab-btn" onclick="showTab('query')">查詢進度</button>
+      <button class="tab-btn" onclick="showTab('admin')">管理更新</button>
+    </div>
+
+    <!-- 我要報修 -->
+    <section id="tab-create" class="card">
+      <h2>我要報修</h2>
+
+      <form id="repairForm">
+        <label>姓名</label>
+        <input type="text" name="name" required placeholder="例如：王小明">
+
+        <label>地點</label>
+        <input type="text" name="location" required placeholder="例如：一樓洗手台、CNC區、辦公室">
+
+        <label>問題類型</label>
+        <select name="category" required>
+          <option value="">請選擇</option>
+          <option value="水電">水電</option>
+          <option value="設備">設備</option>
+          <option value="空調">空調</option>
+          <option value="資訊">資訊</option>
+          <option value="環境">環境</option>
+          <option value="其他">其他</option>
+        </select>
+
+        <label>問題說明</label>
+        <textarea name="description" required placeholder="請簡單說明問題，例如：洗手台下方會漏水。"></textarea>
+
+        <label>照片連結，選填</label>
+        <input type="url" name="photoUrl" placeholder="可貼 Google Drive、LINE 圖片或其他照片連結">
+        <div class="hint">第一版先用「照片連結」最簡單，之後若需要，再加上直接上傳照片功能。</div>
+
+        <button class="btn" type="submit">送出報修</button>
+      </form>
+
+      <div id="createResult" class="result"></div>
+    </section>
+
+    <!-- 查詢進度 -->
+    <section id="tab-query" class="card hidden">
+      <h2>查詢進度</h2>
+
+      <label>輸入報修編號、姓名或地點</label>
+      <input type="text" id="queryKeyword" placeholder="例如：R20260529、王小明、一樓洗手台">
+
+      <button class="btn" onclick="queryRepair()">查詢</button>
+
+      <div id="queryResult" class="result"></div>
+    </section>
+
+    <!-- 管理更新 -->
+    <section id="tab-admin" class="card hidden">
+      <h2>管理更新</h2>
+
+      <form id="adminForm">
+        <label>管理密碼</label>
+        <input type="password" name="password" required placeholder="請輸入管理密碼">
+
+        <label>報修編號</label>
+        <input type="text" name="caseId" required placeholder="例如：R20260529-001">
+
+        <label>狀態</label>
+        <select name="status" required>
+          <option value="待處理">待處理</option>
+          <option value="處理中">處理中</option>
+          <option value="已完成">已完成</option>
+          <option value="暫緩">暫緩</option>
+        </select>
+
+        <label>負責人</label>
+        <input type="text" name="owner" placeholder="例如：陳先生">
+
+        <label>預定完成日</label>
+        <input type="date" name="dueDate">
+
+        <label>備註</label>
+        <textarea name="note" placeholder="例如：已通知水電，預計明天下午處理。"></textarea>
+
+        <button class="btn secondary" type="submit">更新狀態</button>
+      </form>
+
+      <div id="adminResult" class="result"></div>
+    </section>
+
+    <div class="footer-note">
+      建議：第一版先簡單使用，等大家真的開始報修後，再依照實際情況增加照片上傳、通知信、統計表等功能。
+    </div>
+  </div>
+
+  <script>
+    /****************************************
+     * 請改成你的 GAS Web App 網址
+     ****************************************/
+    const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwZGtu0iZI4AavFB39zEygscZorsvTIdnniu2EJqHiKjo76A5WQ3G32F8M7O5M1Nfdqcw/exec';
+
+    function showTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('section[id^="tab-"]').forEach(sec => sec.classList.add('hidden'));
+
+      document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+      const buttons = document.querySelectorAll('.tab-btn');
+      if (tabName === 'create') buttons[0].classList.add('active');
+      if (tabName === 'query') buttons[1].classList.add('active');
+      if (tabName === 'admin') buttons[2].classList.add('active');
+    }
+
+    function generateCaseId() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mi = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      const rand = Math.floor(Math.random() * 900 + 100);
+
+      return `R${yyyy}${mm}${dd}-${hh}${mi}${ss}${rand}`;
+    }
+
+    function showResult(id, message, type = 'success') {
+      const box = document.getElementById(id);
+      box.innerHTML = message;
+      box.className = 'result ' + type;
+      box.style.display = 'block';
+    }
+
+    function formToParams(form) {
+      const formData = new FormData(form);
+      const params = new URLSearchParams();
+
+      for (const [key, value] of formData.entries()) {
+        params.append(key, value);
+      }
+
+      return params;
+    }
+
+    // 新增報修
+    document.getElementById('repairForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes('請貼上')) {
+        showResult('createResult', '尚未設定 GAS Web App 網址。', 'error');
+        return;
+      }
+
+      const caseId = generateCaseId();
+      const params = formToParams(this);
+
+      params.append('action', 'create');
+      params.append('caseId', caseId);
+
+      showResult('createResult', '報修資料送出中，請稍候...', 'success');
+
+      try {
+        await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: params
+        });
+
+        showResult(
+          'createResult',
+          `
+          <strong>報修已送出。</strong><br>
+          報修編號：<strong>${caseId}</strong><br>
+          目前狀態：待處理<br><br>
+          請先記下報修編號，之後可用它查詢進度。
+          `,
+          'success'
+        );
+
+        this.reset();
+
+      } catch (error) {
+        showResult('createResult', '送出失敗，請稍後再試。', 'error');
+      }
+    });
+
+    // 查詢報修，使用 JSONP 避免跨網域問題
+    function queryRepair() {
+      const keyword = document.getElementById('queryKeyword').value.trim();
+
+      if (!keyword) {
+        showResult('queryResult', '請輸入報修編號、姓名或地點。', 'error');
+        return;
+      }
+
+      if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes('請貼上')) {
+        showResult('queryResult', '尚未設定 GAS Web App 網址。', 'error');
+        return;
+      }
+
+      showResult('queryResult', '查詢中，請稍候...', 'success');
+
+      const callbackName = 'handleQuery_' + Date.now();
+
+      window[callbackName] = function(data) {
+        renderQueryResult(data);
+
+        delete window[callbackName];
+        script.remove();
+      };
+
+      const url =
+        GAS_WEBAPP_URL +
+        '?action=query' +
+        '&keyword=' + encodeURIComponent(keyword) +
+        '&callback=' + callbackName;
+
+      const script = document.createElement('script');
+      script.src = url;
+      script.onerror = function() {
+        showResult('queryResult', '查詢失敗，請確認 GAS 網址是否正確。', 'error');
+      };
+
+      document.body.appendChild(script);
+    }
+
+    function renderQueryResult(data) {
+      const box = document.getElementById('queryResult');
+
+      if (!data.success) {
+        showResult('queryResult', data.message || '查詢失敗。', 'error');
+        return;
+      }
+
+      if (!data.results || data.results.length === 0) {
+        showResult('queryResult', '查無資料。', 'error');
+        return;
+      }
+
+      let html = `<strong>共找到 ${data.count} 筆資料</strong>`;
+
+      data.results.forEach(item => {
+        const statusClass = getStatusClass(item['狀態']);
+
+        html += `
+          <div class="repair-item">
+            <div class="repair-id">${escapeHtml(item['報修編號'])}</div>
+            <div class="status ${statusClass}">${escapeHtml(item['狀態'] || '待處理')}</div>
+
+            <div class="row"><strong>建立時間：</strong>${escapeHtml(item['建立時間'])}</div>
+            <div class="row"><strong>姓名：</strong>${escapeHtml(item['姓名'])}</div>
+            <div class="row"><strong>地點：</strong>${escapeHtml(item['地點'])}</div>
+            <div class="row"><strong>問題類型：</strong>${escapeHtml(item['問題類型'])}</div>
+            <div class="row"><strong>問題說明：</strong>${escapeHtml(item['問題說明'])}</div>
+            <div class="row"><strong>負責人：</strong>${escapeHtml(item['負責人'] || '-')}</div>
+            <div class="row"><strong>預定完成日：</strong>${escapeHtml(item['預定完成日'] || '-')}</div>
+            <div class="row"><strong>備註：</strong>${escapeHtml(item['備註'] || '-')}</div>
+            <div class="row"><strong>完成時間：</strong>${escapeHtml(item['完成時間'] || '-')}</div>
+          </div>
+        `;
+      });
+
+      box.innerHTML = html;
+      box.className = 'result success';
+      box.style.display = 'block';
+    }
+
+    function getStatusClass(status) {
+      if (status === '待處理') return 'waiting';
+      if (status === '處理中') return 'doing';
+      if (status === '已完成') return 'done';
+      if (status === '暫緩') return 'hold';
+      return '';
+    }
+
+    // 管理者更新
+    document.getElementById('adminForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes('請貼上')) {
+        showResult('adminResult', '尚未設定 GAS Web App 網址。', 'error');
+        return;
+      }
+
+      const params = formToParams(this);
+      params.append('action', 'update');
+
+      showResult('adminResult', '更新中，請稍候...', 'success');
+
+      try {
+        await fetch(GAS_WEBAPP_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          body: params
+        });
+
+        showResult(
+          'adminResult',
+          '已送出更新。請到「查詢進度」確認狀態是否已更新。',
+          'success'
+        );
+
+      } catch (error) {
+        showResult('adminResult', '更新失敗，請稍後再試。', 'error');
+      }
+    });
+
+    function escapeHtml(text) {
+      if (text === null || text === undefined) return '';
+
+      return String(text)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+  </script>
+</body>
+</html>
