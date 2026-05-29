@@ -5,350 +5,82 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>南帝精密內部報修系統</title>
   <style>
-    body { margin: 0; font-family: "Microsoft JhengHei", Arial, sans-serif; background: #f3f5f7; color: #222; }
-    .wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
-    .hero { background: #1f4e79; color: white; padding: 28px 22px; border-radius: 16px; margin-bottom: 18px; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
-    .hero h1 { margin: 0 0 8px; font-size: 28px; }
-    .hero p { margin: 0; line-height: 1.7; opacity: 0.95; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .tab-btn { border: 0; padding: 12px 18px; border-radius: 999px; background: white; cursor: pointer; font-size: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-    .tab-btn.active { background: #1f4e79; color: white; }
-    .card { background: white; border-radius: 16px; padding: 22px; box-shadow: 0 3px 14px rgba(0,0,0,0.08); margin-bottom: 18px; }
-    .card h2 { margin-top: 0; font-size: 22px; color: #1f4e79; }
-    label { display: block; font-weight: bold; margin: 14px 0 6px; }
-    input, select, textarea { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #ccd3dc; font-size: 16px; background: #fff; }
-    input[type="file"] { padding: 10px; background: #fff; }
-    textarea { min-height: 100px; resize: vertical; }
-    .hint { color: #666; font-size: 14px; line-height: 1.6; margin-top: 6px; }
-    .btn { width: 100%; margin-top: 20px; border: 0; padding: 14px 18px; border-radius: 12px; background: #1f4e79; color: white; font-size: 18px; font-weight: bold; cursor: pointer; }
-    .btn.secondary { background: #555; }
-    .btn:disabled { opacity: 0.65; cursor: not-allowed; }
-    .mini-btn { width: auto; margin-top: 10px; padding: 9px 14px; font-size: 15px; border-radius: 10px; }
-    .result { margin-top: 18px; padding: 14px; border-radius: 12px; background: #eef6ff; line-height: 1.7; display: none; }
-    .result.success { background: #eaf7ea; border-left: 5px solid #3c9d40; }
-    .result.error { background: #fff0f0; border-left: 5px solid #d33; }
-    .repair-item { border: 1px solid #d9e1ea; border-radius: 12px; padding: 14px; margin-top: 12px; background: #fff; }
-    .repair-id { font-weight: bold; color: #1f4e79; font-size: 18px; margin-bottom: 8px; }
-    .status { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #eee; font-weight: bold; margin-bottom: 8px; }
-    .status.waiting { background: #fff2cc; }
-    .status.doing { background: #d9eaf7; }
-    .status.done { background: #d9ead3; }
-    .status.hold { background: #eadcf8; }
-    .row { line-height: 1.8; word-break: break-word; }
-    .hidden { display: none; }
-    .footer-note { color: #666; font-size: 14px; line-height: 1.7; margin-top: 20px; }
-    a { color: #1f4e79; font-weight: bold; }
-    .photo-preview { margin-top: 10px; display: none; }
-    .photo-preview img { max-width: 100%; max-height: 260px; border-radius: 12px; border: 1px solid #ddd; display: block; }
-    .admin-selected { background: #fff8e1; border-left: 5px solid #f6b400; padding: 12px; border-radius: 12px; margin-top: 14px; line-height: 1.7; display: none; }
-    @media (max-width: 600px) { .hero h1 { font-size: 24px; } .card { padding: 18px; } .tab-btn { flex: 1; font-size: 15px; } }
+    body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:#f3f5f7;color:#222}.wrap{max-width:900px;margin:0 auto;padding:24px 16px 60px}.hero{background:#1f4e79;color:#fff;padding:28px 22px;border-radius:16px;margin-bottom:18px;box-shadow:0 8px 20px #0002}.hero h1{margin:0 0 8px;font-size:28px}.hero p{margin:0;line-height:1.7}.tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}.tab-btn{border:0;padding:12px 18px;border-radius:999px;background:#fff;cursor:pointer;font-size:16px;box-shadow:0 2px 8px #0001}.tab-btn.active{background:#1f4e79;color:#fff}.card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 3px 14px #0001;margin-bottom:18px}.card h2{margin-top:0;font-size:22px;color:#1f4e79}label{display:block;font-weight:700;margin:14px 0 6px}input,select,textarea{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #ccd3dc;font-size:16px;background:#fff}textarea{min-height:96px;resize:vertical}.hint{color:#666;font-size:14px;line-height:1.6;margin-top:6px}.btn{width:100%;margin-top:16px;border:0;padding:14px 18px;border-radius:12px;background:#1f4e79;color:white;font-size:18px;font-weight:700;cursor:pointer}.btn.secondary{background:#555}.btn:disabled{opacity:.65;cursor:not-allowed}.mini-btn{width:auto;margin:8px 8px 0 0;padding:9px 14px;font-size:15px;border-radius:10px}.quick-btn{width:auto;margin:8px 8px 0 0;padding:10px 14px;font-size:15px;border-radius:10px;background:#1f4e79}.quick-btn.gray{background:#777}.quick-btn.green{background:#3c7d40}.quick-btn.purple{background:#7052a0}.result{margin-top:18px;padding:14px;border-radius:12px;background:#eef6ff;line-height:1.7;display:none}.success{background:#eaf7ea!important;border-left:5px solid #3c9d40}.error{background:#fff0f0!important;border-left:5px solid #d33}.repair-item{border:1px solid #d9e1ea;border-radius:12px;padding:14px;margin-top:12px;background:#fff}.repair-id{font-weight:700;color:#1f4e79;font-size:18px;margin-bottom:8px}.status{display:inline-block;padding:4px 10px;border-radius:999px;background:#eee;font-weight:700;margin-bottom:8px}.waiting{background:#fff2cc}.doing{background:#d9eaf7}.done{background:#d9ead3}.hold{background:#eadcf8}.urgent{background:#ffe5e5;border-left:5px solid #d33}.row{line-height:1.8;word-break:break-word}.hidden{display:none}.footer-note{color:#666;font-size:14px;line-height:1.7;margin-top:20px}a{color:#1f4e79;font-weight:700}.photo-preview{margin-top:10px;display:none}.photo-preview img{max-width:100%;max-height:260px;border-radius:12px;border:1px solid #ddd;display:block}.admin-selected{background:#fff8e1;border-left:5px solid #f6b400;padding:12px;border-radius:12px;margin-top:14px;line-height:1.7;display:none}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat-box{background:#fff;border:1px solid #d9e1ea;border-radius:12px;padding:12px}.stat-num{font-size:24px;font-weight:700;color:#1f4e79}@media(max-width:600px){.hero h1{font-size:24px}.card{padding:18px}.tab-btn{flex:1;font-size:15px}.grid2,.stats-grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="hero">
-      <h1>南帝精密內部報修系統</h1>
-      <p>請簡單填寫報修內容，送出後會產生報修編號。<br>如為漏水、用電危險、設備停機等急件，請同時電話通知負責人。</p>
-    </div>
+<div class="wrap">
+  <div class="hero"><h1>南帝精密內部報修系統</h1><p>請簡單填寫報修內容，送出後會產生報修編號。<br>如為漏水、用電危險、設備停機等急件，請同時電話通知負責人。</p></div>
+  <div class="tabs"><button class="tab-btn active" onclick="showTab('create')">我要報修</button><button class="tab-btn" onclick="showTab('query')">查詢進度</button><button class="tab-btn" onclick="showTab('admin')">管理更新</button></div>
 
-    <div class="tabs">
-      <button class="tab-btn active" onclick="showTab('create')">我要報修</button>
-      <button class="tab-btn" onclick="showTab('query')">查詢進度</button>
-      <button class="tab-btn" onclick="showTab('admin')">管理更新</button>
-    </div>
+  <section id="tab-create" class="card">
+    <h2>我要報修</h2>
+    <form id="repairForm">
+      <label>姓名</label><input type="text" name="name" required placeholder="例如：王小明">
+      <div class="grid2"><div><label>部門，選填</label><select name="department"><option value="">請選擇</option><option>生產</option><option>品保</option><option>辦公室</option><option>倉庫</option><option>廠務</option><option>其他</option></select></div><div><label>Email，選填</label><input type="email" name="requesterEmail" placeholder="完成後可通知你"></div></div>
+      <label>地點</label><input type="text" name="location" required placeholder="例如：一樓洗手台、CNC 區、辦公室">
+      <div class="grid2"><div><label>問題類型</label><select name="category" required><option value="">請選擇</option><option>水電</option><option>設備</option><option>空調</option><option>資訊</option><option>環境</option><option>其他</option></select></div><div><label>緊急程度</label><select name="urgency"><option>一般</option><option>急件</option><option>停工／危險</option></select></div></div>
+      <label>問題說明</label><textarea name="description" required placeholder="請簡單說明問題，例如：洗手台下方會漏水。"></textarea>
+      <label>上傳照片，選填</label><input type="file" name="photoFile" id="photoFile" accept="image/*"><div class="hint">可直接拍照或選擇圖片。建議照片不要超過 5MB。</div><div id="photoPreview" class="photo-preview"><img id="photoPreviewImg" src="" alt="照片預覽"></div>
+      <button id="submitRepairBtn" class="btn" type="submit">送出報修</button>
+    </form>
+    <div id="createResult" class="result"></div>
+  </section>
 
-    <section id="tab-create" class="card">
-      <h2>我要報修</h2>
-      <form id="repairForm">
-        <label>姓名</label>
-        <input type="text" name="name" required placeholder="例如：王小明">
-        <label>地點</label>
-        <input type="text" name="location" required placeholder="例如：一樓洗手台、CNC 區、辦公室">
-        <label>問題類型</label>
-        <select name="category" required>
-          <option value="">請選擇</option><option value="水電">水電</option><option value="設備">設備</option><option value="空調">空調</option><option value="資訊">資訊</option><option value="環境">環境</option><option value="其他">其他</option>
-        </select>
-        <label>問題說明</label>
-        <textarea name="description" required placeholder="請簡單說明問題，例如：洗手台下方會漏水。"></textarea>
-        <label>上傳照片，選填</label>
-        <input type="file" name="photoFile" id="photoFile" accept="image/*">
-        <div class="hint">可直接拍照或選擇圖片。建議照片不要超過 5MB。</div>
-        <div id="photoPreview" class="photo-preview"><img id="photoPreviewImg" src="" alt="照片預覽"></div>
-        <button id="submitRepairBtn" class="btn" type="submit">送出報修</button>
-      </form>
-      <div id="createResult" class="result"></div>
-    </section>
+  <section id="tab-query" class="card hidden">
+    <h2>查詢進度</h2>
+    <label>報修編號，選填</label><input type="text" id="queryCaseId" placeholder="例如：R20260529">
+    <label>姓名，選填</label><input type="text" id="queryName" placeholder="例如：王小明">
+    <div class="hint">報修編號或姓名，填其中一個就可以查詢。也可以查看最近 10 筆案件。</div>
+    <button class="btn" onclick="queryRepair()">查詢</button><button class="btn secondary" onclick="loadRecentRepairs()">查看最近 10 筆</button>
+    <div id="queryResult" class="result"></div>
+  </section>
 
-    <section id="tab-query" class="card hidden">
-      <h2>查詢進度</h2>
-      <label>報修編號，選填</label>
-      <input type="text" id="queryCaseId" placeholder="例如：R20260529">
-      <label>姓名，選填</label>
-      <input type="text" id="queryName" placeholder="例如：王小明">
-      <div class="hint">報修編號或姓名，填其中一個就可以查詢。</div>
-      <button class="btn" onclick="queryRepair()">查詢</button>
-      <div id="queryResult" class="result"></div>
-    </section>
-
-    <section id="tab-admin" class="card hidden">
-      <h2>管理更新</h2>
-      <div class="hint">先輸入管理密碼，再選擇要看的狀態。點選案件後，系統會自動帶入原本資料；若原本是「待處理」，會自動改成「處理中」。</div>
-      <form id="adminForm">
-        <label>管理密碼</label>
-        <input type="password" name="password" id="adminPassword" required placeholder="請輸入管理密碼">
-        <label>案件狀態篩選</label>
-        <select id="adminListStatus">
-          <option value="待處理">待處理</option>
-          <option value="處理中">處理中</option>
-          <option value="暫緩">暫緩</option>
-          <option value="已完成">已完成</option>
-          <option value="全部">全部案件</option>
-        </select>
-        <button type="button" class="btn" onclick="loadAdminRepairs()">列出案件</button>
-        <div id="adminListResult" class="result"></div>
-        <div id="adminSelectedInfo" class="admin-selected"></div>
-
-        <label>報修編號</label>
-        <input type="text" name="caseId" id="adminCaseId" required placeholder="可從上方案件點選帶入">
-        <label>狀態</label>
-        <select name="status" id="adminStatus" required>
-          <option value="待處理">待處理</option><option value="處理中">處理中</option><option value="已完成">已完成</option><option value="暫緩">暫緩</option>
-        </select>
-        <label>負責人</label>
-        <input type="text" name="owner" id="adminOwner" placeholder="例如：陳先生">
-        <label>預定完成日</label>
-        <input type="date" name="dueDate" id="adminDueDate">
-        <label>備註</label>
-        <textarea name="note" id="adminNote" placeholder="例如：已通知水電，預計明天下午處理。"></textarea>
-        <button id="submitAdminBtn" class="btn secondary" type="submit">更新狀態</button>
-      </form>
-      <div id="adminResult" class="result"></div>
-    </section>
-
-    <div class="footer-note">建議：第一版先簡單使用，等大家真的開始報修後，再依照實際情況增加通知信、統計表、權限管理等功能。</div>
-  </div>
-
-  <script>
-    const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwZGtu0iZI4AavFB39zEygscZorsvTIdnniu2EJqHiKjo76A5WQ3G32F8M7O5M1Nfdqcw/exec';
-    let adminRepairCache = [];
-
-    function showTab(tabName) {
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      document.querySelectorAll('section[id^="tab-"]').forEach(sec => sec.classList.add('hidden'));
-      document.getElementById('tab-' + tabName).classList.remove('hidden');
-      const buttons = document.querySelectorAll('.tab-btn');
-      if (tabName === 'create') buttons[0].classList.add('active');
-      if (tabName === 'query') buttons[1].classList.add('active');
-      if (tabName === 'admin') buttons[2].classList.add('active');
-    }
-
-    function generateCaseId() {
-      const now = new Date();
-      const yyyy = now.getFullYear();
-      const mm = String(now.getMonth() + 1).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mi = String(now.getMinutes()).padStart(2, '0');
-      const ss = String(now.getSeconds()).padStart(2, '0');
-      const rand = Math.floor(Math.random() * 900 + 100);
-      return `R${yyyy}${mm}${dd}-${hh}${mi}${ss}${rand}`;
-    }
-
-    function showResult(id, message, type = 'success') {
-      const box = document.getElementById(id);
-      box.innerHTML = message;
-      box.className = 'result ' + type;
-      box.style.display = 'block';
-    }
-
-    function formToParams(form) {
-      const formData = new FormData(form);
-      const params = new URLSearchParams();
-      for (const [key, value] of formData.entries()) {
-        if (value instanceof File) continue;
-        params.append(key, value);
-      }
-      return params;
-    }
-
-    document.getElementById('photoFile').addEventListener('change', function() {
-      const file = this.files[0];
-      const preview = document.getElementById('photoPreview');
-      const img = document.getElementById('photoPreviewImg');
-      if (!file) { preview.style.display = 'none'; img.src = ''; return; }
-      const maxSize = 5 * 1024 * 1024;
-      if (file.size > maxSize) {
-        alert('圖片太大，請選擇 5MB 以下的照片。');
-        this.value = ''; preview.style.display = 'none'; img.src = ''; return;
-      }
-      img.src = URL.createObjectURL(file);
-      preview.style.display = 'block';
-    });
-
-    function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        if (!file) { resolve(null); return; }
-        const reader = new FileReader();
-        reader.onload = function(e) { resolve({ data: e.target.result, name: file.name, type: file.type }); };
-        reader.onerror = function() { reject(new Error('圖片讀取失敗')); };
-        reader.readAsDataURL(file);
-      });
-    }
-
-    document.getElementById('repairForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes('請貼上')) { showResult('createResult', '尚未設定 GAS Web App 網址。', 'error'); return; }
-      const submitBtn = document.getElementById('submitRepairBtn');
-      submitBtn.disabled = true; submitBtn.innerText = '送出中...';
-      const caseId = generateCaseId();
-      const params = formToParams(this);
-      params.append('action', 'create'); params.append('caseId', caseId);
-      showResult('createResult', '報修資料送出中，請稍候...', 'success');
-      try {
-        const photoFile = document.getElementById('photoFile').files[0];
-        if (photoFile) {
-          const maxSize = 5 * 1024 * 1024;
-          if (photoFile.size > maxSize) { showResult('createResult', '圖片太大，請改用 5MB 以下的照片。', 'error'); submitBtn.disabled = false; submitBtn.innerText = '送出報修'; return; }
-          const photo = await fileToBase64(photoFile);
-          params.append('photoData', photo.data); params.append('photoName', photo.name); params.append('photoType', photo.type);
-        }
-        await fetch(GAS_WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: params });
-        showResult('createResult', `<strong>報修已送出。</strong><br>報修編號：<strong>${caseId}</strong><br>目前狀態：待處理<br><br>請先記下報修編號，之後可用姓名或報修編號查詢進度。`, 'success');
-        this.reset(); document.getElementById('photoPreview').style.display = 'none'; document.getElementById('photoPreviewImg').src = '';
-      } catch (error) { showResult('createResult', '送出失敗，請稍後再試。', 'error'); }
-      submitBtn.disabled = false; submitBtn.innerText = '送出報修';
-    });
-
-    function queryRepair() {
-      const caseId = document.getElementById('queryCaseId').value.trim();
-      const name = document.getElementById('queryName').value.trim();
-      const keyword = caseId || name;
-      if (!keyword) { showResult('queryResult', '請至少輸入報修編號或姓名其中一項。', 'error'); return; }
-      jsonpRequest('queryResult', GAS_WEBAPP_URL + '?action=query&keyword=' + encodeURIComponent(keyword), renderQueryResult);
-    }
-
-    function loadAdminRepairs() {
-      const password = document.getElementById('adminPassword').value.trim();
-      const status = document.getElementById('adminListStatus').value;
-      if (!password) { showResult('adminListResult', '請先輸入管理密碼。', 'error'); return; }
-      clearAdminSelection();
-      showResult('adminListResult', '案件讀取中...', 'success');
-      const url = GAS_WEBAPP_URL + '?action=listRepairs&password=' + encodeURIComponent(password) + '&status=' + encodeURIComponent(status);
-      jsonpRequest('adminListResult', url, renderAdminListResult);
-    }
-
-    function clearAdminSelection() {
-      adminRepairCache = [];
-      document.getElementById('adminCaseId').value = '';
-      document.getElementById('adminStatus').value = '待處理';
-      document.getElementById('adminOwner').value = '';
-      document.getElementById('adminDueDate').value = '';
-      document.getElementById('adminNote').value = '';
-      const selectedInfo = document.getElementById('adminSelectedInfo');
-      selectedInfo.innerHTML = '';
-      selectedInfo.style.display = 'none';
-      const adminResult = document.getElementById('adminResult');
-      adminResult.innerHTML = '';
-      adminResult.style.display = 'none';
-    }
-
-    function jsonpRequest(resultBoxId, baseUrl, callback) {
-      if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes('請貼上')) { showResult(resultBoxId, '尚未設定 GAS Web App 網址。', 'error'); return; }
-      const callbackName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-      window[callbackName] = function(data) { callback(data); delete window[callbackName]; script.remove(); };
-      const script = document.createElement('script');
-      script.src = baseUrl + '&callback=' + callbackName;
-      script.onerror = function() { showResult(resultBoxId, '讀取失敗，請確認 GAS 是否已更新並重新部署。', 'error'); };
-      document.body.appendChild(script);
-    }
-
-    function renderQueryResult(data) {
-      const box = document.getElementById('queryResult');
-      if (!data.success) { showResult('queryResult', data.message || '查詢失敗。', 'error'); return; }
-      if (!data.results || data.results.length === 0) { showResult('queryResult', '查無資料。', 'error'); return; }
-      box.innerHTML = buildRepairListHtml(data.results, `共找到 ${data.count} 筆資料`, false);
-      box.className = 'result success'; box.style.display = 'block';
-    }
-
-    function renderAdminListResult(data) {
-      const box = document.getElementById('adminListResult');
-      if (!data.success) { showResult('adminListResult', data.message || '讀取失敗。', 'error'); return; }
-      adminRepairCache = data.results || [];
-      if (adminRepairCache.length === 0) { showResult('adminListResult', '目前沒有符合條件的案件。', 'success'); return; }
-      const statusText = document.getElementById('adminListStatus').value;
-      box.innerHTML = buildRepairListHtml(adminRepairCache, `${statusText}：${data.count} 筆`, true);
-      box.className = 'result success'; box.style.display = 'block';
-    }
-
-    function buildRepairListHtml(results, title, adminSelect) {
-      let html = `<strong>${title}</strong>`;
-      results.forEach((item, index) => {
-        const statusClass = getStatusClass(item['狀態']);
-        const photoHtml = item['照片連結'] ? `<div class="row"><strong>照片：</strong><a href="${escapeAttr(item['照片連結'])}" target="_blank" rel="noopener">查看照片</a></div>` : `<div class="row"><strong>照片：</strong>-</div>`;
-        const selectBtn = adminSelect ? `<button type="button" class="btn mini-btn" onclick="selectAdminCase(${index})">選擇此案件</button>` : '';
-        html += `<div class="repair-item"><div class="repair-id">${escapeHtml(item['報修編號'])}</div><div class="status ${statusClass}">${escapeHtml(item['狀態'] || '待處理')}</div><div class="row"><strong>建立時間：</strong>${escapeHtml(item['建立時間'])}</div><div class="row"><strong>姓名：</strong>${escapeHtml(item['姓名'])}</div><div class="row"><strong>地點：</strong>${escapeHtml(item['地點'])}</div><div class="row"><strong>問題類型：</strong>${escapeHtml(item['問題類型'])}</div><div class="row"><strong>問題說明：</strong>${escapeHtml(item['問題說明'])}</div>${photoHtml}<div class="row"><strong>負責人：</strong>${escapeHtml(item['負責人'] || '-')}</div><div class="row"><strong>預定完成日：</strong>${escapeHtml(item['預定完成日'] || '-')}</div><div class="row"><strong>備註：</strong>${escapeHtml(item['備註'] || '-')}</div><div class="row"><strong>完成時間：</strong>${escapeHtml(item['完成時間'] || '-')}</div>${selectBtn}</div>`;
-      });
-      return html;
-    }
-
-    function selectAdminCase(index) {
-      const item = adminRepairCache[index];
-      if (!item) return;
-      const originalStatus = item['狀態'] || '待處理';
-      const nextStatus = originalStatus === '待處理' ? '處理中' : originalStatus;
-      document.getElementById('adminCaseId').value = item['報修編號'] || '';
-      document.getElementById('adminStatus').value = nextStatus;
-      document.getElementById('adminOwner').value = item['負責人'] || '';
-      document.getElementById('adminDueDate').value = toDateInputValue(item['預定完成日'] || '');
-      document.getElementById('adminNote').value = item['備註'] || '';
-      const selectedInfo = document.getElementById('adminSelectedInfo');
-      selectedInfo.innerHTML = `<strong>已選擇案件：</strong>${escapeHtml(item['報修編號'])}<br><strong>地點：</strong>${escapeHtml(item['地點'])}<br><strong>問題：</strong>${escapeHtml(item['問題說明'])}<br><strong>原本狀態：</strong>${escapeHtml(originalStatus)}<br><strong>準備更新狀態：</strong>${escapeHtml(nextStatus)}`;
-      selectedInfo.style.display = 'block';
-      document.getElementById('adminCaseId').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function toDateInputValue(value) {
-      if (!value) return '';
-      const text = String(value).trim();
-      const matchSlash = text.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
-      if (matchSlash) return `${matchSlash[1]}-${String(matchSlash[2]).padStart(2, '0')}-${String(matchSlash[3]).padStart(2, '0')}`;
-      const matchDash = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-      if (matchDash) return `${matchDash[1]}-${String(matchDash[2]).padStart(2, '0')}-${String(matchDash[3]).padStart(2, '0')}`;
-      return '';
-    }
-
-    function getStatusClass(status) {
-      if (status === '待處理') return 'waiting';
-      if (status === '處理中') return 'doing';
-      if (status === '已完成') return 'done';
-      if (status === '暫緩') return 'hold';
-      return '';
-    }
-
-    document.getElementById('adminForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      if (!GAS_WEBAPP_URL || GAS_WEBAPP_URL.includes('請貼上')) { showResult('adminResult', '尚未設定 GAS Web App 網址。', 'error'); return; }
-      const submitBtn = document.getElementById('submitAdminBtn');
-      submitBtn.disabled = true; submitBtn.innerText = '更新中...';
-      const params = formToParams(this);
-      params.append('action', 'update');
-      showResult('adminResult', '更新中，請稍候...', 'success');
-      try {
-        await fetch(GAS_WEBAPP_URL, { method: 'POST', mode: 'no-cors', body: params });
-        showResult('adminResult', '已送出更新。系統會重新整理案件列表。', 'success');
-        setTimeout(loadAdminRepairs, 900);
-      } catch (error) { showResult('adminResult', '更新失敗，請稍後再試。', 'error'); }
-      submitBtn.disabled = false; submitBtn.innerText = '更新狀態';
-    });
-
-    function escapeHtml(text) {
-      if (text === null || text === undefined) return '';
-      return String(text).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
-    }
-    function escapeAttr(text) {
-      if (text === null || text === undefined) return '';
-      return String(text).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll("'", '&#039;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-    }
-  </script>
+  <section id="tab-admin" class="card hidden">
+    <h2>管理更新</h2>
+    <div class="hint">先輸入管理密碼，再選擇要看的狀態。點選案件後，會帶入原本資料；若原本是「待處理」，會自動改成「處理中」。</div>
+    <form id="adminForm">
+      <label>管理密碼</label><input type="password" name="password" id="adminPassword" required placeholder="請輸入管理密碼">
+      <div class="grid2"><div><label>案件狀態篩選</label><select id="adminListStatus"><option>待處理</option><option>處理中</option><option>暫緩</option><option>已完成</option><option>全部</option></select></div><div><label>管理功能</label><button type="button" class="btn" onclick="loadAdminRepairs()">列出案件</button></div></div>
+      <button type="button" class="btn secondary" onclick="loadStats()">查看統計</button>
+      <div id="adminListResult" class="result"></div><div id="adminStatsResult" class="result"></div><div id="adminSelectedInfo" class="admin-selected"></div>
+      <label>報修編號</label><input type="text" name="caseId" id="adminCaseId" required placeholder="可從上方案件點選帶入">
+      <label>狀態</label><select name="status" id="adminStatus" required><option>待處理</option><option>處理中</option><option>已完成</option><option>暫緩</option></select>
+      <label>負責人</label><input type="text" name="owner" id="adminOwner" placeholder="例如：陳先生">
+      <label>預定完成日</label><input type="date" name="dueDate" id="adminDueDate">
+      <label>備註</label><textarea name="note" id="adminNote" placeholder="例如：已通知水電，預計明天下午處理。"></textarea>
+      <div><button type="button" class="btn quick-btn" onclick="quickSet('處理中')">快速接單</button><button type="button" class="btn quick-btn purple" onclick="quickSet('暫緩')">快速暫緩</button><button type="button" class="btn quick-btn green" onclick="quickSet('已完成')">快速完成</button></div>
+      <button id="submitAdminBtn" class="btn secondary" type="submit">更新狀態</button>
+    </form><div id="adminResult" class="result"></div>
+  </section>
+  <div class="footer-note">已加入：Email 通知欄位、緊急程度、部門、最近案件、管理統計、快速狀態按鈕。</div>
+</div>
+<script>
+const GAS_WEBAPP_URL='https://script.google.com/macros/s/AKfycbwZGtu0iZI4AavFB39zEygscZorsvTIdnniu2EJqHiKjo76A5WQ3G32F8M7O5M1Nfdqcw/exec';let adminRepairCache=[];
+function showTab(t){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('section[id^="tab-"]').forEach(s=>s.classList.add('hidden'));document.getElementById('tab-'+t).classList.remove('hidden');const b=document.querySelectorAll('.tab-btn');if(t==='create')b[0].classList.add('active');if(t==='query')b[1].classList.add('active');if(t==='admin')b[2].classList.add('active')}
+function generateCaseId(){const n=new Date(),p=x=>String(x).padStart(2,'0'),r=Math.floor(Math.random()*900+100);return`R${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}-${p(n.getHours())}${p(n.getMinutes())}${p(n.getSeconds())}${r}`}
+function showResult(id,msg,type='success'){const b=document.getElementById(id);b.innerHTML=msg;b.className='result '+type;b.style.display='block'}
+function formToParams(form){const fd=new FormData(form),p=new URLSearchParams();for(const[k,v]of fd.entries()){if(v instanceof File)continue;p.append(k,v)}return p}
+document.getElementById('photoFile').addEventListener('change',function(){const f=this.files[0],pv=document.getElementById('photoPreview'),img=document.getElementById('photoPreviewImg');if(!f){pv.style.display='none';img.src='';return}if(f.size>5*1024*1024){alert('圖片太大，請選擇 5MB 以下的照片。');this.value='';pv.style.display='none';img.src='';return}img.src=URL.createObjectURL(f);pv.style.display='block'});
+function fileToBase64(file){return new Promise((res,rej)=>{if(!file){res(null);return}const r=new FileReader();r.onload=e=>res({data:e.target.result,name:file.name,type:file.type});r.onerror=()=>rej(new Error('圖片讀取失敗'));r.readAsDataURL(file)})}
+document.getElementById('repairForm').addEventListener('submit',async function(e){e.preventDefault();const btn=document.getElementById('submitRepairBtn');btn.disabled=true;btn.innerText='送出中...';const caseId=generateCaseId(),p=formToParams(this);p.append('action','create');p.append('caseId',caseId);showResult('createResult','報修資料送出中，請稍候...','success');try{const f=document.getElementById('photoFile').files[0];if(f){if(f.size>5*1024*1024){showResult('createResult','圖片太大，請改用 5MB 以下的照片。','error');return}const photo=await fileToBase64(f);p.append('photoData',photo.data);p.append('photoName',photo.name);p.append('photoType',photo.type)}await fetch(GAS_WEBAPP_URL,{method:'POST',mode:'no-cors',body:p});showResult('createResult',`<strong>報修已送出。</strong><br>報修編號：<strong>${caseId}</strong><br>目前狀態：待處理<br><br>可用姓名或報修編號查詢進度。`,'success');this.reset();document.getElementById('photoPreview').style.display='none';document.getElementById('photoPreviewImg').src=''}catch(err){showResult('createResult','送出失敗，請稍後再試。','error')}finally{btn.disabled=false;btn.innerText='送出報修'}});
+function queryRepair(){const k=document.getElementById('queryCaseId').value.trim()||document.getElementById('queryName').value.trim();if(!k){showResult('queryResult','請至少輸入報修編號或姓名其中一項。','error');return}jsonp('queryResult',GAS_WEBAPP_URL+'?action=query&keyword='+encodeURIComponent(k),renderQueryResult)}
+function loadRecentRepairs(){jsonp('queryResult',GAS_WEBAPP_URL+'?action=listRecent&limit=10',renderQueryResult)}
+function loadAdminRepairs(){const pw=document.getElementById('adminPassword').value.trim(),st=document.getElementById('adminListStatus').value;if(!pw){showResult('adminListResult','請先輸入管理密碼。','error');return}clearAdminSelection();showResult('adminListResult','案件讀取中...','success');jsonp('adminListResult',GAS_WEBAPP_URL+'?action=listRepairs&password='+encodeURIComponent(pw)+'&status='+encodeURIComponent(st),renderAdminListResult)}
+function loadStats(){const pw=document.getElementById('adminPassword').value.trim();if(!pw){showResult('adminStatsResult','請先輸入管理密碼。','error');return}jsonp('adminStatsResult',GAS_WEBAPP_URL+'?action=stats&password='+encodeURIComponent(pw),renderStats)}
+function jsonp(box,url,cb){const name='cb_'+Date.now()+'_'+Math.floor(Math.random()*999);window[name]=data=>{cb(data);delete window[name];script.remove()};const script=document.createElement('script');script.src=url+'&callback='+name;script.onerror=()=>showResult(box,'讀取失敗，請確認 GAS 是否已更新並重新部署。','error');document.body.appendChild(script)}
+function renderQueryResult(d){if(!d.success){showResult('queryResult',d.message||'查詢失敗。','error');return}if(!d.results||!d.results.length){showResult('queryResult','查無資料。','error');return}showResult('queryResult',buildList(d.results,`共找到 ${d.count} 筆資料`,false),'success')}
+function renderAdminListResult(d){if(!d.success){showResult('adminListResult',d.message||'讀取失敗。','error');return}adminRepairCache=d.results||[];if(!adminRepairCache.length){showResult('adminListResult','目前沒有符合條件的案件。','success');return}showResult('adminListResult',buildList(adminRepairCache,`${document.getElementById('adminListStatus').value}：${d.count} 筆`,true),'success')}
+function renderStats(d){if(!d.success){showResult('adminStatsResult',d.message||'統計讀取失敗。','error');return}const s=d.stats||{};let html='<strong>案件統計</strong><div class="stats-grid">';['全部','待處理','處理中','暫緩','已完成','逾期','本月新增','平均完成天數'].forEach(k=>{html+=`<div class="stat-box"><div>${k}</div><div class="stat-num">${escapeHtml(s[k]??0)}</div></div>`});html+='</div>';showResult('adminStatsResult',html,'success')}
+function buildList(arr,title,admin){let h=`<strong>${title}</strong>`;arr.forEach((it,i)=>{const urgent=(it['緊急程度']==='急件'||it['緊急程度']==='停工／危險')?' urgent':'';const photo=it['照片連結']?`<div class="row"><strong>照片：</strong><a href="${escapeAttr(it['照片連結'])}" target="_blank">查看照片</a></div>`:'<div class="row"><strong>照片：</strong>-</div>';const btn=admin?`<button type="button" class="btn mini-btn" onclick="selectAdminCase(${i})">選擇此案件</button>`:'';h+=`<div class="repair-item${urgent}"><div class="repair-id">${escapeHtml(it['報修編號'])}</div><div class="status ${getStatusClass(it['狀態'])}">${escapeHtml(it['狀態']||'待處理')}</div><div class="row"><strong>建立時間：</strong>${escapeHtml(it['建立時間'])}</div><div class="row"><strong>姓名：</strong>${escapeHtml(it['姓名'])}</div><div class="row"><strong>部門：</strong>${escapeHtml(it['部門']||'-')}</div><div class="row"><strong>地點：</strong>${escapeHtml(it['地點'])}</div><div class="row"><strong>類型／緊急：</strong>${escapeHtml(it['問題類型'])}／${escapeHtml(it['緊急程度']||'一般')}</div><div class="row"><strong>問題：</strong>${escapeHtml(it['問題說明'])}</div>${photo}<div class="row"><strong>負責人：</strong>${escapeHtml(it['負責人']||'-')}</div><div class="row"><strong>預定完成日：</strong>${escapeHtml(it['預定完成日']||'-')}</div><div class="row"><strong>備註：</strong>${escapeHtml(it['備註']||'-')}</div>${btn}</div>`});return h}
+function clearAdminSelection(){document.getElementById('adminCaseId').value='';document.getElementById('adminStatus').value='待處理';document.getElementById('adminOwner').value='';document.getElementById('adminDueDate').value='';document.getElementById('adminNote').value='';document.getElementById('adminSelectedInfo').style.display='none';document.getElementById('adminResult').style.display='none'}
+function selectAdminCase(i){const it=adminRepairCache[i];if(!it)return;const os=it['狀態']||'待處理',ns=os==='待處理'?'處理中':os;document.getElementById('adminCaseId').value=it['報修編號']||'';document.getElementById('adminStatus').value=ns;document.getElementById('adminOwner').value=it['負責人']||'';document.getElementById('adminDueDate').value=toDateInput(it['預定完成日']||'');document.getElementById('adminNote').value=it['備註']||'';const b=document.getElementById('adminSelectedInfo');b.innerHTML=`<strong>已選擇案件：</strong>${escapeHtml(it['報修編號'])}<br><strong>地點：</strong>${escapeHtml(it['地點'])}<br><strong>問題：</strong>${escapeHtml(it['問題說明'])}<br><strong>原本狀態：</strong>${escapeHtml(os)}<br><strong>準備更新狀態：</strong>${escapeHtml(ns)}`;b.style.display='block';document.getElementById('adminCaseId').scrollIntoView({behavior:'smooth',block:'center'})}
+function quickSet(st){if(!document.getElementById('adminCaseId').value){showResult('adminResult','請先選擇案件。','error');return}document.getElementById('adminStatus').value=st;if(st==='已完成'&&!document.getElementById('adminNote').value)document.getElementById('adminNote').value='已完成處理。';document.getElementById('adminForm').requestSubmit()}
+document.getElementById('adminForm').addEventListener('submit',async function(e){e.preventDefault();const btn=document.getElementById('submitAdminBtn'),p=formToParams(this);p.append('action','update');btn.disabled=true;btn.innerText='更新中...';showResult('adminResult','更新中，請稍候...','success');try{await fetch(GAS_WEBAPP_URL,{method:'POST',mode:'no-cors',body:p});showResult('adminResult','已送出更新。系統會重新整理案件列表。','success');setTimeout(loadAdminRepairs,900)}catch(err){showResult('adminResult','更新失敗，請稍後再試。','error')}finally{btn.disabled=false;btn.innerText='更新狀態'}});
+function toDateInput(v){const t=String(v||'').trim(),m=t.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);return m?`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`:''}
+function getStatusClass(s){if(s==='待處理')return'waiting';if(s==='處理中')return'doing';if(s==='已完成')return'done';if(s==='暫緩')return'hold';return''}
+function escapeHtml(t){return String(t??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
+function escapeAttr(t){return escapeHtml(t)}
+</script>
 </body>
 </html>
