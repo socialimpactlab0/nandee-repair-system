@@ -5,239 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>南帝精密內部報修系統</title>
   <style>
-    :root { --main:#1f4e79; --bg:#f3f5f7; --border:#d6dee7; --good:#eaf7ea; --bad:#fff0f0; }
-    * { box-sizing:border-box; }
-    body { margin:0; font-family:"Microsoft JhengHei",Arial,sans-serif; background:var(--bg); color:#222; }
-    .wrap { max-width:900px; margin:0 auto; padding:24px 16px 60px; }
-    .hero { background:var(--main); color:#fff; padding:28px 22px; border-radius:16px; margin-bottom:18px; box-shadow:0 8px 20px rgba(0,0,0,.12); }
-    .hero h1 { margin:0 0 8px; font-size:28px; }
-    .hero p { margin:0; line-height:1.7; }
-    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
-    .tab-btn { border:0; padding:12px 18px; border-radius:999px; background:#fff; font-size:16px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.08); }
-    .tab-btn.active { background:var(--main); color:#fff; }
-    .card { background:#fff; border-radius:16px; padding:22px; box-shadow:0 3px 14px rgba(0,0,0,.08); margin-bottom:18px; }
-    .card h2 { margin:0 0 14px; font-size:22px; color:var(--main); }
-    label { display:block; font-weight:bold; margin:14px 0 6px; }
-    input, select, textarea { width:100%; border:1px solid var(--border); border-radius:10px; padding:12px; font-size:16px; background:#fff; }
-    textarea { min-height:96px; resize:vertical; }
-    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-    .hint { color:#666; font-size:14px; line-height:1.6; margin-top:6px; }
-    .btn { width:100%; margin-top:16px; border:0; border-radius:12px; padding:14px 18px; color:#fff; background:var(--main); font-size:18px; font-weight:bold; cursor:pointer; }
-    .btn.secondary { background:#555; }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    .result { display:none; margin-top:16px; padding:14px; border-radius:12px; line-height:1.7; background:#eef6ff; }
-    .success { background:var(--good)!important; border-left:5px solid #3c9d40; }
-    .error { background:var(--bad)!important; border-left:5px solid #d33; }
-    .upload-progress { display:none; margin-top:10px; padding:10px 12px; border-radius:10px; background:#eef6ff; color:#1f4e79; font-size:14px; line-height:1.6; }
-    .photo-preview { display:none; margin-top:10px; }
-    .photo-preview img { display:block; max-width:100%; max-height:260px; border-radius:12px; border:1px solid #ddd; }
-    .repair-item { border:1px solid #d9e1ea; border-radius:12px; padding:14px; margin-top:12px; background:#fff; }
-    .repair-item.urgent { background:#ffeaea; border-left:5px solid #d33; }
-    .repair-id { font-size:18px; font-weight:bold; color:var(--main); margin-bottom:8px; }
-    .status { display:inline-block; font-weight:bold; border-radius:999px; padding:4px 10px; margin-bottom:8px; background:#eee; }
-    .waiting { background:#fff2cc; } .doing { background:#d9eaf7; } .done { background:#d9ead3; } .hold { background:#eadcf8; }
-    .row { line-height:1.8; word-break:break-word; }
-    .hidden { display:none; }
-    a { color:var(--main); font-weight:bold; }
-    .mini-btn { width:auto; margin:9px 0 0; padding:9px 14px; font-size:15px; border-radius:10px; }
-    .quick-actions { margin-top:14px; background:#f6f8fa; border:1px solid var(--border); border-radius:12px; padding:12px; }
-    .quick-title { color:var(--main); font-weight:bold; }
-    .quick-btn { width:auto; margin:8px 8px 0 0; padding:10px 14px; font-size:15px; }
-    .quick-btn.purple { background:#7052a0; } .quick-btn.green { background:#3c7d40; }
-    .admin-selected { display:none; background:#fff8e1; border-left:5px solid #f6b400; padding:12px; border-radius:12px; margin-top:14px; line-height:1.7; }
-    .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:10px; }
-    .stat-box { border:1px solid var(--border); background:#fff; border-radius:12px; padding:12px; }
-    .stat-num { font-size:24px; font-weight:bold; color:var(--main); }
-    .footer-note { color:#666; font-size:14px; line-height:1.7; margin-top:20px; }
-    @media (max-width:600px) { .hero h1{font-size:24px;} .card{padding:18px;} .tab-btn{flex:1;font-size:15px;} .grid2,.stats-grid{grid-template-columns:1fr;} }
+    :root{--main:#1f4e79;--bg:#f3f5f7;--border:#d6dee7;--good:#eaf7ea;--bad:#fff0f0}
+    *{box-sizing:border-box} body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:var(--bg);color:#222}
+    .wrap{max-width:760px;margin:0 auto;padding:24px 16px 60px}.hero{background:var(--main);color:#fff;padding:28px 22px;border-radius:16px;margin-bottom:18px;box-shadow:0 8px 20px rgba(0,0,0,.12)}
+    .hero h1{margin:0 0 8px;font-size:28px}.hero p{margin:0;line-height:1.7}.tabs{display:flex;gap:8px;margin-bottom:16px}.tab-btn{flex:1;border:0;padding:13px 16px;border-radius:999px;background:#fff;cursor:pointer;font-size:16px;box-shadow:0 2px 8px rgba(0,0,0,.08)}.tab-btn.active{background:var(--main);color:#fff}
+    .card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 3px 14px rgba(0,0,0,.08);margin-bottom:18px}.card h2{margin:0 0 14px;font-size:22px;color:var(--main)}
+    label{display:block;font-weight:bold;margin:14px 0 6px}input,select,textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:12px;font-size:16px;background:#fff}textarea{min-height:96px;resize:vertical}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hint{color:#666;font-size:14px;line-height:1.6;margin-top:6px}
+    .btn{width:100%;margin-top:16px;border:0;border-radius:12px;padding:14px 18px;color:#fff;background:var(--main);font-size:18px;font-weight:bold;cursor:pointer}.btn.secondary{background:#555}.btn:disabled{opacity:.6;cursor:not-allowed}
+    .result{display:none;margin-top:16px;padding:14px;border-radius:12px;line-height:1.7;background:#eef6ff}.success{background:var(--good)!important;border-left:5px solid #3c9d40}.error{background:var(--bad)!important;border-left:5px solid #d33}
+    .upload-progress{display:none;margin-top:10px;padding:10px 12px;border-radius:10px;background:#eef6ff;color:var(--main);font-size:14px;line-height:1.6}.photo-preview{display:none;margin-top:10px}.photo-preview img{display:block;max-width:100%;max-height:260px;border-radius:12px;border:1px solid #ddd}
+    .repair-item{border:1px solid #d9e1ea;border-radius:12px;padding:14px;margin-top:12px;background:#fff}.repair-item.urgent{background:#ffeaea;border-left:5px solid #d33}.repair-id{font-size:18px;font-weight:bold;color:var(--main);margin-bottom:8px}.status{display:inline-block;font-weight:bold;border-radius:999px;padding:4px 10px;margin-bottom:8px;background:#eee}.waiting{background:#fff2cc}.doing{background:#d9eaf7}.done{background:#d9ead3}.hold{background:#eadcf8}.row{line-height:1.8;word-break:break-word}.hidden{display:none}a{color:var(--main);font-weight:bold}.footer-note{color:#666;font-size:14px;line-height:1.7;margin-top:20px}
+    @media(max-width:600px){.hero h1{font-size:24px}.card{padding:18px}.grid2{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="hero">
-    <h1>南帝精密內部報修系統</h1>
-    <p>請簡單填寫報修內容，送出後會產生報修編號。<br>如為漏水、用電危險、設備停機等急件，請同時電話通知負責人。</p>
-  </div>
-  <div class="tabs">
-    <button class="tab-btn active" onclick="showTab('create')">我要報修</button>
-    <button class="tab-btn" onclick="showTab('query')">查詢進度</button>
-    <button class="tab-btn" onclick="showTab('admin')">管理更新</button>
-  </div>
-
+  <div class="hero"><h1>南帝精密內部報修系統</h1><p>請簡單填寫報修內容，送出後會產生報修編號。<br>如為漏水、用電危險、設備停機等急件，請同時電話通知負責人。</p></div>
+  <div class="tabs"><button class="tab-btn active" onclick="showTab('create')">我要報修</button><button class="tab-btn" onclick="showTab('query')">查詢進度</button></div>
   <section id="tab-create" class="card">
     <h2>我要報修</h2>
     <form id="repairForm">
-      <label>姓名</label>
-      <input type="text" name="name" required placeholder="例如：王小明">
-      <div class="grid2">
-        <div><label>部門，選填</label><select name="department"><option value="">請選擇</option><option>生產</option><option>品保</option><option>辦公室</option><option>倉庫</option><option>廠務</option><option>其他</option></select></div>
-        <div><label>Email，選填</label><input type="email" name="requesterEmail" placeholder="完成後可通知你"></div>
-      </div>
-      <label>地點</label>
-      <input type="text" name="location" required placeholder="例如：一樓洗手台、CNC 區、辦公室">
-      <div class="grid2">
-        <div><label>問題類型</label><select name="category" required><option value="">請選擇</option><option>水電</option><option>設備</option><option>空調</option><option>資訊</option><option>環境</option><option>其他</option></select></div>
-        <div><label>緊急程度</label><select name="urgency"><option>一般</option><option>急件</option><option>停工／危險</option></select></div>
-      </div>
-      <label>問題說明</label>
-      <textarea name="description" required placeholder="請簡單說明問題，例如：洗手台下方會漏水。"></textarea>
-      <label>上傳照片，選填</label>
-      <input type="file" id="photoFile" accept="image/*">
-      <div class="hint">照片選取後會自動縮小再上傳，畫面清晰但速度較快。原始照片建議不超過 20MB。</div>
-      <div id="photoProgress" class="upload-progress"></div>
-      <div id="photoPreview" class="photo-preview"><img id="photoPreviewImg" alt="照片預覽"></div>
+      <label>姓名</label><input type="text" name="name" required placeholder="例如：王小明">
+      <div class="grid2"><div><label>部門，選填</label><select name="department"><option value="">請選擇</option><option>生產</option><option>品保</option><option>辦公室</option><option>倉庫</option><option>廠務</option><option>其他</option></select></div><div><label>Email，選填</label><input type="email" name="requesterEmail" placeholder="完成後可通知你"></div></div>
+      <label>地點</label><input type="text" name="location" required placeholder="例如：一樓洗手台、CNC 區、辦公室">
+      <div class="grid2"><div><label>問題類型</label><select name="category" required><option value="">請選擇</option><option>水電</option><option>設備</option><option>空調</option><option>資訊</option><option>環境</option><option>其他</option></select></div><div><label>緊急程度</label><select name="urgency"><option>一般</option><option>急件</option><option>停工／危險</option></select></div></div>
+      <label>問題說明</label><textarea name="description" required placeholder="請簡單說明問題，例如：洗手台下方會漏水。"></textarea>
+      <label>上傳照片，選填</label><input type="file" id="photoFile" accept="image/*"><div class="hint">照片選取後會自動縮小再上傳，畫面清晰但速度較快。</div><div id="photoProgress" class="upload-progress"></div><div id="photoPreview" class="photo-preview"><img id="photoPreviewImg" alt="照片預覽"></div>
       <button id="submitRepairBtn" class="btn" type="submit">送出報修</button>
-    </form>
-    <div id="createResult" class="result"></div>
+    </form><div id="createResult" class="result"></div>
   </section>
-
   <section id="tab-query" class="card hidden">
     <h2>查詢進度</h2>
     <label>報修編號，選填</label><input type="text" id="queryCaseId" placeholder="例如：R20260529">
     <label>姓名，選填</label><input type="text" id="queryName" placeholder="例如：王小明">
-    <div class="hint">報修編號或姓名，填其中一個就可以查詢。也可以查看最近 10 筆案件。</div>
-    <button class="btn" onclick="queryRepair()">查詢</button>
-    <button class="btn secondary" onclick="loadRecentRepairs()">查看最近 10 筆</button>
+    <div class="hint">報修編號或姓名，填其中一個即可查詢。</div>
+    <button class="btn" onclick="queryRepair()">查詢</button><button class="btn secondary" onclick="loadRecentRepairs()">查看最近 10 筆</button>
     <div id="queryResult" class="result"></div>
   </section>
-
-  <section id="tab-admin" class="card hidden">
-    <h2>管理更新</h2>
-    <div class="hint">輸入管理密碼後可列出案件、查看統計與更新處理狀態。</div>
-    <form id="adminForm">
-      <label>管理密碼</label><input type="password" name="password" id="adminPassword" required placeholder="請輸入管理密碼">
-      <div class="grid2">
-        <div><label>案件狀態篩選</label><select id="adminListStatus"><option>待處理</option><option>處理中</option><option>暫緩</option><option>已完成</option><option>全部</option></select></div>
-        <div><label>管理功能</label><button type="button" class="btn" onclick="loadAdminRepairs()">列出案件</button></div>
-      </div>
-      <button type="button" class="btn secondary" onclick="loadStats()">查看統計</button>
-      <div id="adminListResult" class="result"></div><div id="adminStatsResult" class="result"></div><div id="adminSelectedInfo" class="admin-selected"></div>
-      <label>報修編號</label><input type="text" name="caseId" id="adminCaseId" required placeholder="可從上方案件點選帶入">
-      <label>狀態</label><select name="status" id="adminStatus" required><option>待處理</option><option>處理中</option><option>已完成</option><option>暫緩</option></select>
-      <div class="quick-actions"><div class="quick-title">一鍵更新狀態</div><div class="hint">請先從上方案件清單點選一筆案件，再使用下方快速按鈕。</div><button type="button" class="btn quick-btn" onclick="quickSet('處理中')">改為處理中</button><button type="button" class="btn quick-btn purple" onclick="quickSet('暫緩')">改為暫緩</button><button type="button" class="btn quick-btn green" onclick="quickSet('已完成')">改為已完成</button></div>
-      <label>負責人</label><input type="text" name="owner" id="adminOwner" placeholder="例如：陳先生">
-      <label>預定完成日</label><input type="date" name="dueDate" id="adminDueDate">
-      <label>備註</label><textarea name="note" id="adminNote" placeholder="例如：已通知水電，預計明天下午處理。"></textarea>
-      <button id="submitAdminBtn" class="btn secondary" type="submit">更新狀態</button>
-    </form>
-    <div id="adminResult" class="result"></div>
-  </section>
-  <div class="footer-note">照片會在瀏覽器中先自動縮小後上傳，以減少送出等待時間。</div>
+  <div class="footer-note">照片會先自動縮小後上傳，以減少送出等待時間。</div>
 </div>
 <script>
-const GAS_WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbwZGtu0iZI4AavFB39zEygscZorsvTIdnniu2EJqHiKjo76A5WQ3G32F8M7O5M1Nfdqcw/exec';
-const MAX_ORIGINAL_BYTES = 20 * 1024 * 1024;
-const MAX_IMAGE_SIDE = 1280;
-const JPEG_QUALITY = 0.72;
-let preparedPhoto = null;
-let photoPreparingTask = null;
-let adminRepairCache = [];
-
-function showTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('section[id^="tab-"]').forEach(sec => sec.classList.add('hidden'));
-  document.getElementById('tab-' + tab).classList.remove('hidden');
-  const buttons = document.querySelectorAll('.tab-btn');
-  if (tab === 'create') buttons[0].classList.add('active');
-  if (tab === 'query') buttons[1].classList.add('active');
-  if (tab === 'admin') buttons[2].classList.add('active');
-}
-function showResult(id, html, type='success') { const box=document.getElementById(id); box.innerHTML=html; box.className='result '+type; box.style.display='block'; }
-function showPhotoProgress(html, type='') { const box=document.getElementById('photoProgress'); box.innerHTML=html; box.className='upload-progress '+type; box.style.display='block'; }
-function hidePhotoProgress() { const box=document.getElementById('photoProgress'); box.innerHTML=''; box.style.display='none'; }
-function formatBytes(bytes) { if (!bytes) return '0 KB'; if (bytes < 1024*1024) return Math.round(bytes/1024) + ' KB'; return (bytes/(1024*1024)).toFixed(1) + ' MB'; }
-function generateCaseId() { const n=new Date(), p=x=>String(x).padStart(2,'0'), r=Math.floor(Math.random()*900+100); return `R${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}-${p(n.getHours())}${p(n.getMinutes())}${p(n.getSeconds())}${r}`; }
-function formToParams(form) { const fd=new FormData(form), params=new URLSearchParams(); for (const [key,value] of fd.entries()) { if (!(value instanceof File)) params.append(key,value); } return params; }
-
-function readAsDataUrl(blob) {
-  return new Promise((resolve,reject) => { const reader=new FileReader(); reader.onload=()=>resolve(reader.result); reader.onerror=()=>reject(new Error('圖片轉換失敗')); reader.readAsDataURL(blob); });
-}
-function loadImage(file) {
-  return new Promise((resolve,reject) => { const url=URL.createObjectURL(file); const image=new Image(); image.onload=()=>{ URL.revokeObjectURL(url); resolve(image); }; image.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('無法讀取圖片格式')); }; image.src=url; });
-}
-function canvasToBlob(canvas, type, quality) {
-  return new Promise((resolve,reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('圖片壓縮失敗')), type, quality));
-}
-async function compressPhoto(file) {
-  if (file.size > MAX_ORIGINAL_BYTES) throw new Error('照片超過 20MB，請選擇較小的照片。');
-  const image = await loadImage(file);
-  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(image.naturalWidth, image.naturalHeight));
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
-  const context = canvas.getContext('2d', { alpha:false });
-  context.drawImage(image, 0, 0, width, height);
-  const compressedBlob = await canvasToBlob(canvas, 'image/jpeg', JPEG_QUALITY);
-  return { blob:compressedBlob, name:'repair-photo-' + Date.now() + '.jpg', type:'image/jpeg', originalSize:file.size, width:width, height:height };
-}
-
-document.getElementById('photoFile').addEventListener('change', function() {
-  const file = this.files[0];
-  const preview = document.getElementById('photoPreview');
-  const img = document.getElementById('photoPreviewImg');
-  preparedPhoto = null;
-  preview.style.display='none'; img.src='';
-  if (!file) { photoPreparingTask=null; hidePhotoProgress(); return; }
-  showPhotoProgress('正在縮小照片，請稍候…');
-  photoPreparingTask = compressPhoto(file).then(photo => {
-    preparedPhoto = photo;
-    img.src = URL.createObjectURL(photo.blob);
-    preview.style.display = 'block';
-    const saved = Math.max(0, Math.round((1 - photo.blob.size / photo.originalSize) * 100));
-    showPhotoProgress(`照片已準備完成：${formatBytes(photo.originalSize)} → <strong>${formatBytes(photo.blob.size)}</strong>（縮小 ${saved}%），上傳會較快。`, 'success');
-    return photo;
-  }).catch(error => {
-    preparedPhoto = null;
-    this.value='';
-    showPhotoProgress(error.message + ' 請重新選擇照片。', 'error');
-    throw error;
-  });
-});
-
-document.getElementById('repairForm').addEventListener('submit', async function(event) {
-  event.preventDefault();
-  const btn=document.getElementById('submitRepairBtn');
-  btn.disabled=true; btn.innerText='送出中...';
-  const caseId=generateCaseId();
-  const params=formToParams(this);
-  params.append('action','create'); params.append('caseId',caseId);
-  showResult('createResult','正在建立報修資料，請稍候…','success');
-  try {
-    if (photoPreparingTask) {
-      showResult('createResult','正在準備壓縮後的照片…','success');
-      await photoPreparingTask;
-    }
-    if (preparedPhoto) {
-      showResult('createResult','照片上傳中，請稍候…','success');
-      params.append('photoData', await readAsDataUrl(preparedPhoto.blob));
-      params.append('photoName', preparedPhoto.name);
-      params.append('photoType', preparedPhoto.type);
-    }
-    await fetch(GAS_WEBAPP_URL, { method:'POST', mode:'no-cors', body:params });
-    showResult('createResult', `<strong>報修已送出。</strong><br>報修編號：<strong>${caseId}</strong><br>目前狀態：待處理<br><br>可用姓名或報修編號查詢進度。`, 'success');
-    this.reset(); preparedPhoto=null; photoPreparingTask=null; hidePhotoProgress(); document.getElementById('photoPreview').style.display='none'; document.getElementById('photoPreviewImg').src='';
-  } catch (error) { showResult('createResult', '送出失敗：' + escapeHtml(error.message || '請稍後再試。'), 'error'); }
-  finally { btn.disabled=false; btn.innerText='送出報修'; }
-});
-
-function jsonp(box,url,callback) { const name='cb_'+Date.now()+'_'+Math.floor(Math.random()*999); window[name]=data=>{ callback(data); delete window[name]; script.remove(); }; const script=document.createElement('script'); script.src=url+'&callback='+name; script.onerror=()=>showResult(box,'讀取失敗，請確認 GAS 已重新部署。','error'); document.body.appendChild(script); }
-function queryRepair() { const keyword=document.getElementById('queryCaseId').value.trim() || document.getElementById('queryName').value.trim(); if(!keyword){showResult('queryResult','請至少輸入報修編號或姓名其中一項。','error');return;} jsonp('queryResult',GAS_WEBAPP_URL+'?action=query&keyword='+encodeURIComponent(keyword),renderQueryResult); }
-function loadRecentRepairs() { jsonp('queryResult',GAS_WEBAPP_URL+'?action=listRecent&limit=10',renderQueryResult); }
-function renderQueryResult(data) { if(!data.success){showResult('queryResult',data.message||'查詢失敗。','error');return;} if(!data.results||!data.results.length){showResult('queryResult','查無資料。','error');return;} showResult('queryResult',buildList(data.results,`共找到 ${data.count} 筆資料`,false),'success'); }
-function loadAdminRepairs() { const password=document.getElementById('adminPassword').value.trim(), status=document.getElementById('adminListStatus').value; if(!password){showResult('adminListResult','請先輸入管理密碼。','error');return;} clearAdminSelection(); showResult('adminListResult','案件讀取中…','success'); jsonp('adminListResult',GAS_WEBAPP_URL+'?action=listRepairs&password='+encodeURIComponent(password)+'&status='+encodeURIComponent(status),renderAdminListResult); }
-function renderAdminListResult(data) { if(!data.success){showResult('adminListResult',data.message||'讀取失敗。','error');return;} adminRepairCache=data.results||[]; if(!adminRepairCache.length){showResult('adminListResult','目前沒有符合條件的案件。','success');return;} showResult('adminListResult',buildList(adminRepairCache,`${document.getElementById('adminListStatus').value}：${data.count} 筆`,true),'success'); }
-function loadStats() { const password=document.getElementById('adminPassword').value.trim(); if(!password){showResult('adminStatsResult','請先輸入管理密碼。','error');return;} jsonp('adminStatsResult',GAS_WEBAPP_URL+'?action=stats&password='+encodeURIComponent(password),renderStats); }
-function renderStats(data) { if(!data.success){showResult('adminStatsResult',data.message||'統計讀取失敗。','error');return;} const stats=data.stats||{}; let html='<strong>案件統計</strong><div class="stats-grid">'; ['全部','待處理','處理中','暫緩','已完成','逾期','本月新增','平均完成天數'].forEach(key=>html+=`<div class="stat-box"><div>${key}</div><div class="stat-num">${escapeHtml(stats[key]??0)}</div></div>`); html+='</div>'; showResult('adminStatsResult',html,'success'); }
-function buildList(items,title,isAdmin) { let html=`<strong>${title}</strong>`; items.forEach((item,index)=>{ const urgent=item['緊急程度']==='急件'||item['緊急程度']==='停工／危險'?' urgent':''; const photo=item['照片連結']?`<div class="row"><strong>照片：</strong><a href="${escapeAttr(item['照片連結'])}" target="_blank" rel="noopener">查看照片</a></div>`:'<div class="row"><strong>照片：</strong>-</div>'; const select=isAdmin?`<button type="button" class="btn mini-btn" onclick="selectAdminCase(${index})">選擇此案件</button>`:''; html+=`<div class="repair-item${urgent}"><div class="repair-id">${escapeHtml(item['報修編號'])}</div><div class="status ${getStatusClass(item['狀態'])}">${escapeHtml(item['狀態']||'待處理')}</div><div class="row"><strong>建立時間：</strong>${escapeHtml(item['建立時間'])}</div><div class="row"><strong>姓名：</strong>${escapeHtml(item['姓名'])}</div><div class="row"><strong>部門：</strong>${escapeHtml(item['部門']||'-')}</div><div class="row"><strong>地點：</strong>${escapeHtml(item['地點'])}</div><div class="row"><strong>類型／緊急：</strong>${escapeHtml(item['問題類型'])}／${escapeHtml(item['緊急程度']||'一般')}</div><div class="row"><strong>問題：</strong>${escapeHtml(item['問題說明'])}</div>${photo}<div class="row"><strong>負責人：</strong>${escapeHtml(item['負責人']||'-')}</div><div class="row"><strong>預定完成日：</strong>${escapeHtml(item['預定完成日']||'-')}</div><div class="row"><strong>備註：</strong>${escapeHtml(item['備註']||'-')}</div>${select}</div>`; }); return html; }
-function clearAdminSelection() { document.getElementById('adminCaseId').value=''; document.getElementById('adminStatus').value='待處理'; document.getElementById('adminOwner').value=''; document.getElementById('adminDueDate').value=''; document.getElementById('adminNote').value=''; document.getElementById('adminSelectedInfo').style.display='none'; document.getElementById('adminResult').style.display='none'; }
-function selectAdminCase(index) { const item=adminRepairCache[index]; if(!item)return; const oldStatus=item['狀態']||'待處理', newStatus=oldStatus==='待處理'?'處理中':oldStatus; document.getElementById('adminCaseId').value=item['報修編號']||''; document.getElementById('adminStatus').value=newStatus; document.getElementById('adminOwner').value=item['負責人']||''; document.getElementById('adminDueDate').value=toDateInput(item['預定完成日']||''); document.getElementById('adminNote').value=item['備註']||''; const box=document.getElementById('adminSelectedInfo'); box.innerHTML=`<strong>已選擇案件：</strong>${escapeHtml(item['報修編號'])}<br><strong>地點：</strong>${escapeHtml(item['地點'])}<br><strong>問題：</strong>${escapeHtml(item['問題說明'])}<br><strong>原本狀態：</strong>${escapeHtml(oldStatus)}<br><strong>準備更新狀態：</strong>${escapeHtml(newStatus)}`; box.style.display='block'; document.getElementById('adminCaseId').scrollIntoView({behavior:'smooth',block:'center'}); }
-function quickSet(status) { if(!document.getElementById('adminCaseId').value){showResult('adminResult','請先選擇案件。','error');return;} document.getElementById('adminStatus').value=status; if(status==='已完成'&&!document.getElementById('adminNote').value)document.getElementById('adminNote').value='已完成處理。'; document.getElementById('adminForm').requestSubmit(); }
-document.getElementById('adminForm').addEventListener('submit', async function(event) { event.preventDefault(); const btn=document.getElementById('submitAdminBtn'), params=formToParams(this); params.append('action','update'); btn.disabled=true; btn.innerText='更新中...'; showResult('adminResult','更新中，請稍候…','success'); try { await fetch(GAS_WEBAPP_URL,{method:'POST',mode:'no-cors',body:params}); showResult('adminResult','已送出更新。系統會重新整理案件列表。','success'); setTimeout(loadAdminRepairs,900); } catch(error) { showResult('adminResult','更新失敗，請稍後再試。','error'); } finally { btn.disabled=false; btn.innerText='更新狀態'; } });
-function toDateInput(value) { const match=String(value||'').trim().match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/); return match?`${match[1]}-${String(match[2]).padStart(2,'0')}-${String(match[3]).padStart(2,'0')}`:''; }
-function getStatusClass(status) { if(status==='待處理')return'waiting'; if(status==='處理中')return'doing'; if(status==='已完成')return'done'; if(status==='暫緩')return'hold'; return''; }
-function escapeHtml(text) { return String(text??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;'); }
-function escapeAttr(text) { return escapeHtml(text); }
+const GAS_WEBAPP_URL='https://script.google.com/macros/s/AKfycbwZGtu0iZI4AavFB39zEygscZorsvTIdnniu2EJqHiKjo76A5WQ3G32F8M7O5M1Nfdqcw/exec';
+const MAX_ORIGINAL_BYTES=20*1024*1024,MAX_IMAGE_SIDE=1280,JPEG_QUALITY=.72;let preparedPhoto=null,photoPreparingTask=null;
+function showTab(tab){document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('section[id^="tab-"]').forEach(s=>s.classList.add('hidden'));document.getElementById('tab-'+tab).classList.remove('hidden');document.querySelectorAll('.tab-btn')[tab==='create'?0:1].classList.add('active')}
+function showResult(id,html,type='success'){const b=document.getElementById(id);b.innerHTML=html;b.className='result '+type;b.style.display='block'}
+function showPhotoProgress(html,type=''){const b=document.getElementById('photoProgress');b.innerHTML=html;b.className='upload-progress '+type;b.style.display='block'}
+function hidePhotoProgress(){document.getElementById('photoProgress').style.display='none'}
+function formatBytes(bytes){return bytes<1048576?Math.round(bytes/1024)+' KB':(bytes/1048576).toFixed(1)+' MB'}
+function generateCaseId(){const n=new Date(),p=x=>String(x).padStart(2,'0'),r=Math.floor(Math.random()*900+100);return`R${n.getFullYear()}${p(n.getMonth()+1)}${p(n.getDate())}-${p(n.getHours())}${p(n.getMinutes())}${p(n.getSeconds())}${r}`}
+function formToParams(form){const fd=new FormData(form),p=new URLSearchParams();for(const[k,v]of fd.entries()){if(!(v instanceof File))p.append(k,v)}return p}
+function readAsDataUrl(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error('圖片轉換失敗'));r.readAsDataURL(blob)})}
+function loadImage(file){return new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('無法讀取圖片格式'))};img.src=url})}
+function canvasToBlob(canvas,type,quality){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('圖片壓縮失敗')),type,quality))}
+async function compressPhoto(file){if(file.size>MAX_ORIGINAL_BYTES)throw new Error('照片超過 20MB，請選擇較小的照片。');const img=await loadImage(file),scale=Math.min(1,MAX_IMAGE_SIDE/Math.max(img.naturalWidth,img.naturalHeight)),w=Math.max(1,Math.round(img.naturalWidth*scale)),h=Math.max(1,Math.round(img.naturalHeight*scale)),canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d',{alpha:false}).drawImage(img,0,0,w,h);const blob=await canvasToBlob(canvas,'image/jpeg',JPEG_QUALITY);return{blob,name:'repair-photo-'+Date.now()+'.jpg',type:'image/jpeg',originalSize:file.size}}
+document.getElementById('photoFile').addEventListener('change',function(){const file=this.files[0],preview=document.getElementById('photoPreview'),img=document.getElementById('photoPreviewImg');preparedPhoto=null;preview.style.display='none';img.src='';if(!file){photoPreparingTask=null;hidePhotoProgress();return}showPhotoProgress('正在縮小照片，請稍候…');photoPreparingTask=compressPhoto(file).then(photo=>{preparedPhoto=photo;img.src=URL.createObjectURL(photo.blob);preview.style.display='block';const saved=Math.max(0,Math.round((1-photo.blob.size/photo.originalSize)*100));showPhotoProgress(`照片已準備完成：${formatBytes(photo.originalSize)} → <strong>${formatBytes(photo.blob.size)}</strong>（縮小 ${saved}%）`,'success');return photo}).catch(error=>{preparedPhoto=null;this.value='';showPhotoProgress(error.message,'error');throw error})});
+document.getElementById('repairForm').addEventListener('submit',async function(e){e.preventDefault();const btn=document.getElementById('submitRepairBtn'),caseId=generateCaseId(),params=formToParams(this);params.append('action','create');params.append('caseId',caseId);btn.disabled=true;btn.innerText='送出中...';showResult('createResult','正在建立報修資料，請稍候…','success');try{if(photoPreparingTask)await photoPreparingTask;if(preparedPhoto){showResult('createResult','照片上傳中，請稍候…','success');params.append('photoData',await readAsDataUrl(preparedPhoto.blob));params.append('photoName',preparedPhoto.name);params.append('photoType',preparedPhoto.type)}await fetch(GAS_WEBAPP_URL,{method:'POST',mode:'no-cors',body:params});showResult('createResult',`<strong>報修已送出。</strong><br>報修編號：<strong>${caseId}</strong><br>目前狀態：待處理<br><br>可用姓名或報修編號查詢進度。`,'success');this.reset();preparedPhoto=null;photoPreparingTask=null;hidePhotoProgress();document.getElementById('photoPreview').style.display='none'}catch(error){showResult('createResult','送出失敗：'+escapeHtml(error.message||'請稍後再試。'),'error')}finally{btn.disabled=false;btn.innerText='送出報修'}});
+function jsonp(url,cb){const name='cb_'+Date.now()+'_'+Math.floor(Math.random()*999),script=document.createElement('script');window[name]=data=>{cb(data);delete window[name];script.remove()};script.src=url+'&callback='+name;script.onerror=()=>showResult('queryResult','讀取失敗，請稍後再試。','error');document.body.appendChild(script)}
+function queryRepair(){const keyword=document.getElementById('queryCaseId').value.trim()||document.getElementById('queryName').value.trim();if(!keyword){showResult('queryResult','請至少輸入報修編號或姓名其中一項。','error');return}jsonp(GAS_WEBAPP_URL+'?action=query&keyword='+encodeURIComponent(keyword),renderQueryResult)}
+function loadRecentRepairs(){jsonp(GAS_WEBAPP_URL+'?action=listRecent&limit=10',renderQueryResult)}
+function renderQueryResult(data){if(!data.success){showResult('queryResult',data.message||'查詢失敗。','error');return}if(!data.results||!data.results.length){showResult('queryResult','查無資料。','error');return}let html=`<strong>共找到 ${data.count} 筆資料</strong>`;data.results.forEach(item=>{const urgent=item['緊急程度']==='急件'||item['緊急程度']==='停工／危險'?' urgent':'',photo=item['照片連結']?`<div class="row"><strong>照片：</strong><a href="${escapeHtml(item['照片連結'])}" target="_blank" rel="noopener">查看照片</a></div>`:'';html+=`<div class="repair-item${urgent}"><div class="repair-id">${escapeHtml(item['報修編號'])}</div><div class="status ${statusClass(item['狀態'])}">${escapeHtml(item['狀態']||'待處理')}</div><div class="row"><strong>日期：</strong>${escapeHtml(item['建立時間'])}</div><div class="row"><strong>地點：</strong>${escapeHtml(item['地點'])}</div><div class="row"><strong>問題：</strong>${escapeHtml(item['問題說明'])}</div>${photo}<div class="row"><strong>預定完成日：</strong>${escapeHtml(item['預定完成日']||'-')}</div><div class="row"><strong>備註：</strong>${escapeHtml(item['備註']||'-')}</div></div>`});showResult('queryResult',html,'success')}
+function statusClass(s){return s==='待處理'?'waiting':s==='處理中'?'doing':s==='已完成'?'done':s==='暫緩'?'hold':''}
+function escapeHtml(text){return String(text??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 </script>
 </body>
 </html>
