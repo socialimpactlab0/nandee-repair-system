@@ -9,6 +9,7 @@
  * 5. 管理密碼只經由 google.script.run 傳到 GAS，不放在網址參數中。
  * 6. 新上傳照片保留為私人 Drive 檔案，只在管理後台按需讀取。
  * 7. 每次管理者更新皆寫入「處理紀錄」。
+ * 8. 報修單先建立完成，照片再逐張獨立上傳並確認成功。
  ****************************************************/
 
 const SHEET_NAME = '報修單總表';
@@ -65,6 +66,7 @@ function doGet(e) {
   try {
     const action = String(p.action || '').trim();
     if (action === 'query') return queryRepair_(e);
+    if (action === 'photoStatus') return photoStatus_(e);
 
     if (['listRecent', 'listRepairs', 'stats'].includes(action)) {
       return outputJson_({
@@ -83,6 +85,7 @@ function doPost(e) {
   try {
     const action = String(e.parameter.action || '').trim();
     if (action === 'create') return createRepair_(e);
+    if (action === 'uploadPhoto') return uploadPhoto_(e);
 
     return outputJson_({
       success: false,
@@ -104,16 +107,7 @@ function createRepair_(e) {
   ensureHeaders_(sheet, HEADERS);
   const caseId = String(e.parameter.caseId || generateCaseId_()).trim();
   const now = new Date();
-
-  const photoIds = [1, 2, 3].map(function(index) {
-    const suffix = index === 1 ? '' : String(index);
-    return savePrivatePhoto_(
-      caseId + '_0' + index,
-      e.parameter['photoData' + suffix] || '',
-      e.parameter['photoName' + suffix] || '',
-      e.parameter['photoType' + suffix] || ''
-    );
-  });
+  const plannedPhotos = Math.min(3, Math.max(0, Number(e.parameter.photoCount || 0)));
 
   const item = {
     '報修編號': caseId,
@@ -126,9 +120,7 @@ function createRepair_(e) {
     '問題類型': String(e.parameter.category || '').trim(),
     '緊急程度': String(e.parameter.urgency || '一般').trim(),
     '問題說明': String(e.parameter.description || '').trim(),
-    '照片檔案ID1': photoIds[0],
-    '照片檔案ID2': photoIds[1],
-    '照片檔案ID3': photoIds[2],
+    '照片檔案ID1': '', '照片檔案ID2': '', '照片檔案ID3': '',
     '照片連結': '', '照片連結2': '', '照片連結3': '',
     '狀態': '待處理', '負責人': '', '預定完成日': '', '備註': '',
     '完成時間': '', '最後更新時間': now
@@ -137,15 +129,103 @@ function createRepair_(e) {
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
-    appendObjectRow_(sheet, item);
+    const existed = getRepairByCaseId_(caseId);
+    if (!existed) appendObjectRow_(sheet, item);
   } finally {
     lock.releaseLock();
   }
 
-  try { sendNewRepairNotice_(item, photoIds.filter(Boolean).length); }
+  try { sendNewRepairNotice_(item, plannedPhotos); }
   catch (error) { Logger.log('新報修通知寄送失敗：' + error.message); }
 
   return outputJson_({success: true, message: '報修單已建立', caseId: caseId});
+}
+
+function uploadPhoto_(e) {
+  const caseId = String(e.parameter.caseId || '').trim();
+  const name = String(e.parameter.name || '').trim();
+  const queryCode = String(e.parameter.queryCode || '').trim();
+  const index = Number(e.parameter.photoIndex || 0);
+
+  if (!caseId || !name || !/^\d{4}$/.test(queryCode)) {
+    return outputJson_({success: false, message: '照片上傳驗證資料不完整'});
+  }
+  if (![1, 2, 3].includes(index)) {
+    return outputJson_({success: false, message: '照片編號不正確'});
+  }
+  if (!e.parameter.photoData) {
+    return outputJson_({success: false, message: '沒有收到照片資料'});
+  }
+
+  const sheet = getSheet_();
+  const map = getHeaderMap_(sheet);
+  const lock = LockService.getScriptLock();
+  let fileId = '';
+
+  try {
+    lock.waitLock(30000);
+    const data = sheet.getDataRange().getValues();
+    let targetRow = -1;
+    let item = null;
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][map['報修編號']] || '').trim() === caseId) {
+        item = rowArrayToObject_(data[0], data[i]);
+        targetRow = i + 1;
+        break;
+      }
+    }
+
+    if (!item || String(item['姓名'] || '').trim() !== name || String(item['查詢碼'] || '').trim() !== queryCode) {
+      return outputJson_({success: false, message: '找不到可上傳照片的報修案件'});
+    }
+
+    const idColumn = '照片檔案ID' + index;
+    const existedId = String(item[idColumn] || '').trim();
+    if (existedId) {
+      return outputJson_({success: true, message: '此照片已上傳', photoIndex: index});
+    }
+
+    fileId = savePrivatePhoto_(
+      caseId + '_0' + index,
+      e.parameter.photoData || '',
+      e.parameter.photoName || '',
+      e.parameter.photoType || ''
+    );
+
+    if (!fileId) return outputJson_({success: false, message: '照片儲存失敗'});
+
+    setCellByHeader_(sheet, targetRow, map, idColumn, fileId);
+    setCellByHeader_(sheet, targetRow, map, '最後更新時間', new Date());
+  } finally {
+    lock.releaseLock();
+  }
+
+  return outputJson_({success: true, message: '照片已上傳', photoIndex: index});
+}
+
+function photoStatus_(e) {
+  const caseId = String(e.parameter.caseId || '').trim();
+  const name = String(e.parameter.name || '').trim();
+  const queryCode = String(e.parameter.queryCode || '').trim();
+  if (!caseId || !name || !/^\d{4}$/.test(queryCode)) {
+    return outputJson_({success: false, message: '查詢照片狀態的資料不完整'}, e);
+  }
+
+  const item = getRepairByCaseId_(caseId);
+  if (!item || String(item['姓名'] || '').trim() !== name || String(item['查詢碼'] || '').trim() !== queryCode) {
+    return outputJson_({success: false, message: '找不到此案件'}, e);
+  }
+
+  const uploaded = [1, 2, 3].map(function(index) {
+    return !!String(item['照片檔案ID' + index] || '').trim();
+  });
+
+  return outputJson_({
+    success: true,
+    uploaded: uploaded,
+    count: uploaded.filter(function(value) { return value; }).length
+  }, e);
 }
 
 function queryRepair_(e) {
@@ -304,7 +384,6 @@ function savePrivatePhoto_(prefix, dataUrl, fileName, mimeType) {
   const ext = getExtension_(fileName, mimeType);
   const file = getPhotoFolder_().createFile(Utilities.newBlob(bytes, mimeType || 'image/jpeg', prefix + '_' + Date.now() + ext));
   file.setShareableByEditors(false);
-  // 不呼叫 setSharing(ANYONE_WITH_LINK)：新照片維持 Drive 預設私人權限。
   return file.getId();
 }
 
@@ -335,13 +414,16 @@ function getExtension_(name, type) {
 }
 
 /******************** 通知與紀錄 ********************/
-function sendNewRepairNotice_(item, photoCount) {
+function sendNewRepairNotice_(item, plannedPhotos) {
   if (!ADMIN_NOTIFY_EMAIL) return;
+  const photoMessage = plannedPhotos > 0
+    ? '預計附加照片：' + plannedPhotos + ' 張（照片可能仍在逐張上傳，請至管理後台查看）'
+    : '附加照片：無';
   MailApp.sendEmail({
     to: ADMIN_NOTIFY_EMAIL,
     subject: '【南帝報修】新案件 ' + item['報修編號'] + '｜' + item['地點'],
     name: '南帝精密報修系統',
-    body: '有新的報修案件：\n\n報修編號：' + item['報修編號'] + '\n報修人：' + item['姓名'] + '\n部門：' + (item['部門'] || '-') + '\n地點：' + item['地點'] + '\n問題類型：' + item['問題類型'] + '\n緊急程度：' + item['緊急程度'] + '\n\n問題說明：\n' + item['問題說明'] + '\n\n附加照片：' + photoCount + ' 張\n\n請至管理後台查看與處理。'
+    body: '有新的報修案件：\n\n報修編號：' + item['報修編號'] + '\n報修人：' + item['姓名'] + '\n部門：' + (item['部門'] || '-') + '\n地點：' + item['地點'] + '\n問題類型：' + item['問題類型'] + '\n緊急程度：' + item['緊急程度'] + '\n\n問題說明：\n' + item['問題說明'] + '\n\n' + photoMessage + '\n\n請至管理後台查看與處理。'
   });
 }
 
