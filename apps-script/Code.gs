@@ -1,15 +1,16 @@
 /****************************************************
- * 南帝精密｜內部報修系統 GAS 安全版 Code.gs
+ * 南帝精密｜內部報修系統 GAS 直連加速版 Code.gs
  *
- * 重點：
- * 1. 員工頁仍由 GitHub Pages 提供。
- * 2. 員工以「姓名＋4 位查詢碼」查自己的案件。
- * 3. 員工 API 不回傳照片檔案 ID 或照片連結。
- * 4. 管理頁改由 GAS 的 Admin.html 提供。
- * 5. 管理密碼只經由 google.script.run 傳到 GAS，不放在網址參數中。
- * 6. 新上傳照片保留為私人 Drive 檔案，只在管理後台按需讀取。
- * 7. 每次管理者更新皆寫入「處理紀錄」。
- * 8. 報修單先建立完成，照片再逐張獨立上傳並確認成功。
+ * 架構：
+ * - 員工頁：GAS Employee.html，以 google.script.run 直接呼叫後端
+ * - 管理頁：GAS Admin.html，以 google.script.run 呼叫後端
+ * - 報修資料：Google Sheet
+ * - 照片：Google Drive 私人檔案
+ *
+ * 加速重點：
+ * - 員工送出不再經 GitHub 跨站 POST 後再查詢確認。
+ * - 報修資料與照片在同一次 server call 完成，Sheet 僅寫入一次。
+ * - 回傳各階段花費時間，便於判斷剩餘瓶頸。
  ****************************************************/
 
 const SHEET_NAME = '報修單總表';
@@ -20,6 +21,8 @@ const ADMIN_NOTIFY_EMAIL = 'flt.roger@gmail.com';
 const SPREADSHEET_ID = '';
 const TIME_ZONE = 'Asia/Taipei';
 const ADMIN_TOKEN_SECONDS = 60 * 60 * 6;
+const MAX_PHOTOS = 3;
+const MAX_PHOTO_BYTES = 350 * 1024;
 
 const HEADERS = [
   '報修編號','建立時間','姓名','查詢碼','部門','報修人Email','地點',
@@ -50,189 +53,121 @@ function setup() {
   }
 
   getPhotoFolder_();
-  Logger.log('安全版報修系統初始化完成。');
+  Logger.log('報修系統 GAS 直連加速版初始化完成。');
 }
 
-/******************** Web App 入口 ********************/
+/******************** Web App 頁面入口 ********************/
 function doGet(e) {
-  const p = e && e.parameter ? e.parameter : {};
+  const page = String((e && e.parameter && e.parameter.page) || 'employee').toLowerCase();
+  const fileName = page === 'admin' ? 'Admin' : 'Employee';
+  const title = page === 'admin' ? '南帝精密報修管理後台' : '南帝精密內部報修系統';
 
-  if (String(p.page || '') === 'admin') {
-    return HtmlService.createHtmlOutputFromFile('Admin')
-      .setTitle('南帝精密報修管理後台')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  try {
-    const action = String(p.action || '').trim();
-    if (action === 'query') return queryRepair_(e);
-    if (action === 'photoStatus') return photoStatus_(e);
-
-    if (['listRecent', 'listRepairs', 'stats'].includes(action)) {
-      return outputJson_({
-        success: false,
-        message: '此公開查詢功能已停用，管理者請由管理後台操作。'
-      }, e);
-    }
-
-    return outputJson_({success: true, message: '南帝精密報修系統 GAS 正常運作'}, e);
-  } catch (error) {
-    return outputJson_({success: false, message: '系統讀取失敗：' + error.message}, e);
-  }
+  return HtmlService.createHtmlOutputFromFile(fileName)
+    .setTitle(title)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-function doPost(e) {
-  try {
-    const action = String(e.parameter.action || '').trim();
-    if (action === 'create') return createRepair_(e);
-    if (action === 'uploadPhoto') return uploadPhoto_(e);
+/******************** 員工端：送出報修 ********************/
+function employeeSubmitRepair(payload) {
+  const startedAt = Date.now();
+  payload = payload || {};
 
-    return outputJson_({
-      success: false,
-      message: '此公開送出功能不支援管理更新，請由管理後台操作。'
-    });
-  } catch (error) {
-    return outputJson_({success: false, message: '系統處理失敗：' + error.message});
-  }
-}
+  const name = String(payload.name || '').trim();
+  const queryCode = String(payload.queryCode || '').trim();
+  const location = String(payload.location || '').trim();
+  const category = String(payload.category || '').trim();
+  const description = String(payload.description || '').trim();
+  const photos = Array.isArray(payload.photos) ? payload.photos.slice(0, MAX_PHOTOS) : [];
 
-/******************** 員工端：新增與查詢 ********************/
-function createRepair_(e) {
-  const queryCode = String(e.parameter.queryCode || '').trim();
-  if (!/^\d{4}$/.test(queryCode)) {
-    return outputJson_({success: false, message: '查詢碼必須是 4 位數字'});
-  }
+  if (!name) throw new Error('請填寫姓名。');
+  if (!/^\d{4}$/.test(queryCode)) throw new Error('查詢碼必須是 4 位數字。');
+  if (!location) throw new Error('請填寫地點。');
+  if (!category) throw new Error('請選擇問題類型。');
+  if (!description) throw new Error('請填寫問題說明。');
 
-  const sheet = getSheet_();
-  ensureHeaders_(sheet, HEADERS);
-  const caseId = String(e.parameter.caseId || generateCaseId_()).trim();
+  const caseId = generateCaseId_();
   const now = new Date();
-  const plannedPhotos = Math.min(3, Math.max(0, Number(e.parameter.photoCount || 0)));
+  const photoStart = Date.now();
+  const photoIds = ['', '', ''];
+  const failedPhotos = [];
+
+  photos.forEach(function(photo, index) {
+    try {
+      if (!photo || !photo.dataUrl) return;
+      photoIds[index] = savePrivatePhoto_(
+        caseId + '_0' + (index + 1),
+        photo.dataUrl,
+        photo.name || '',
+        photo.type || 'image/jpeg'
+      );
+    } catch (error) {
+      failedPhotos.push(index + 1);
+      Logger.log('照片 ' + (index + 1) + ' 上傳失敗：' + error.message);
+    }
+  });
+  const photoMs = Date.now() - photoStart;
 
   const item = {
     '報修編號': caseId,
     '建立時間': now,
-    '姓名': String(e.parameter.name || '').trim(),
+    '姓名': name,
     '查詢碼': queryCode,
-    '部門': String(e.parameter.department || '').trim(),
-    '報修人Email': String(e.parameter.requesterEmail || '').trim(),
-    '地點': String(e.parameter.location || '').trim(),
-    '問題類型': String(e.parameter.category || '').trim(),
-    '緊急程度': String(e.parameter.urgency || '一般').trim(),
-    '問題說明': String(e.parameter.description || '').trim(),
-    '照片檔案ID1': '', '照片檔案ID2': '', '照片檔案ID3': '',
+    '部門': String(payload.department || '').trim(),
+    '報修人Email': String(payload.requesterEmail || '').trim(),
+    '地點': location,
+    '問題類型': category,
+    '緊急程度': String(payload.urgency || '一般').trim(),
+    '問題說明': description,
+    '照片檔案ID1': photoIds[0],
+    '照片檔案ID2': photoIds[1],
+    '照片檔案ID3': photoIds[2],
     '照片連結': '', '照片連結2': '', '照片連結3': '',
     '狀態': '待處理', '負責人': '', '預定完成日': '', '備註': '',
     '完成時間': '', '最後更新時間': now
   };
 
+  const sheetStart = Date.now();
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(10000);
-    const existed = getRepairByCaseId_(caseId);
-    if (!existed) appendObjectRow_(sheet, item);
+    appendObjectRow_(getSheet_(), item);
+  } catch (error) {
+    photoIds.filter(Boolean).forEach(function(fileId) {
+      try { DriveApp.getFileById(fileId).setTrashed(true); } catch (ignore) {}
+    });
+    throw error;
   } finally {
     lock.releaseLock();
   }
+  const sheetMs = Date.now() - sheetStart;
 
-  try { sendNewRepairNotice_(item, plannedPhotos); }
-  catch (error) { Logger.log('新報修通知寄送失敗：' + error.message); }
-
-  return outputJson_({success: true, message: '報修單已建立', caseId: caseId});
-}
-
-function uploadPhoto_(e) {
-  const caseId = String(e.parameter.caseId || '').trim();
-  const name = String(e.parameter.name || '').trim();
-  const queryCode = String(e.parameter.queryCode || '').trim();
-  const index = Number(e.parameter.photoIndex || 0);
-
-  if (!caseId || !name || !/^\d{4}$/.test(queryCode)) {
-    return outputJson_({success: false, message: '照片上傳驗證資料不完整'});
-  }
-  if (![1, 2, 3].includes(index)) {
-    return outputJson_({success: false, message: '照片編號不正確'});
-  }
-  if (!e.parameter.photoData) {
-    return outputJson_({success: false, message: '沒有收到照片資料'});
-  }
-
-  const sheet = getSheet_();
-  const map = getHeaderMap_(sheet);
-  const lock = LockService.getScriptLock();
-  let fileId = '';
-
+  const mailStart = Date.now();
   try {
-    lock.waitLock(30000);
-    const data = sheet.getDataRange().getValues();
-    let targetRow = -1;
-    let item = null;
-
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][map['報修編號']] || '').trim() === caseId) {
-        item = rowArrayToObject_(data[0], data[i]);
-        targetRow = i + 1;
-        break;
-      }
-    }
-
-    if (!item || String(item['姓名'] || '').trim() !== name || String(item['查詢碼'] || '').trim() !== queryCode) {
-      return outputJson_({success: false, message: '找不到可上傳照片的報修案件'});
-    }
-
-    const idColumn = '照片檔案ID' + index;
-    const existedId = String(item[idColumn] || '').trim();
-    if (existedId) {
-      return outputJson_({success: true, message: '此照片已上傳', photoIndex: index});
-    }
-
-    fileId = savePrivatePhoto_(
-      caseId + '_0' + index,
-      e.parameter.photoData || '',
-      e.parameter.photoName || '',
-      e.parameter.photoType || ''
-    );
-
-    if (!fileId) return outputJson_({success: false, message: '照片儲存失敗'});
-
-    setCellByHeader_(sheet, targetRow, map, idColumn, fileId);
-    setCellByHeader_(sheet, targetRow, map, '最後更新時間', new Date());
-  } finally {
-    lock.releaseLock();
+    sendNewRepairNotice_(item, photoIds.filter(Boolean).length, failedPhotos);
+  } catch (error) {
+    Logger.log('新報修通知寄送失敗：' + error.message);
   }
+  const mailMs = Date.now() - mailStart;
 
-  return outputJson_({success: true, message: '照片已上傳', photoIndex: index});
-}
-
-function photoStatus_(e) {
-  const caseId = String(e.parameter.caseId || '').trim();
-  const name = String(e.parameter.name || '').trim();
-  const queryCode = String(e.parameter.queryCode || '').trim();
-  if (!caseId || !name || !/^\d{4}$/.test(queryCode)) {
-    return outputJson_({success: false, message: '查詢照片狀態的資料不完整'}, e);
-  }
-
-  const item = getRepairByCaseId_(caseId);
-  if (!item || String(item['姓名'] || '').trim() !== name || String(item['查詢碼'] || '').trim() !== queryCode) {
-    return outputJson_({success: false, message: '找不到此案件'}, e);
-  }
-
-  const uploaded = [1, 2, 3].map(function(index) {
-    return !!String(item['照片檔案ID' + index] || '').trim();
-  });
-
-  return outputJson_({
+  return {
     success: true,
-    uploaded: uploaded,
-    count: uploaded.filter(function(value) { return value; }).length
-  }, e);
+    caseId: caseId,
+    photoCount: photoIds.filter(Boolean).length,
+    failedPhotos: failedPhotos,
+    timing: {
+      photoMs: photoMs,
+      sheetMs: sheetMs,
+      mailMs: mailMs,
+      totalMs: Date.now() - startedAt
+    }
+  };
 }
 
-function queryRepair_(e) {
-  const name = String(e.parameter.name || '').trim();
-  const queryCode = String(e.parameter.queryCode || '').trim();
-  if (!name) return outputJson_({success: false, message: '請輸入姓名'}, e);
-  if (!/^\d{4}$/.test(queryCode)) return outputJson_({success: false, message: '請輸入 4 位數字查詢碼'}, e);
+function employeeQueryRepairs(name, queryCode) {
+  name = String(name || '').trim();
+  queryCode = String(queryCode || '').trim();
+  if (!name) throw new Error('請輸入姓名。');
+  if (!/^\d{4}$/.test(queryCode)) throw new Error('請輸入 4 位數字查詢碼。');
 
   const results = getDataObjects_()
     .filter(function(item) {
@@ -241,7 +176,7 @@ function queryRepair_(e) {
     .map(toEmployeeSafeItem_)
     .reverse();
 
-  return outputJson_({success: true, count: results.length, results: results}, e);
+  return {success: true, count: results.length, results: results};
 }
 
 function toEmployeeSafeItem_(item) {
@@ -292,8 +227,7 @@ function adminListRepairs(token, filterStatus) {
       '部門': item['部門'], '報修人Email': item['報修人Email'], '地點': item['地點'],
       '問題類型': item['問題類型'], '緊急程度': item['緊急程度'], '問題說明': item['問題說明'],
       '狀態': item['狀態'], '負責人': item['負責人'], '預定完成日': item['預定完成日'],
-      '備註': item['備註'], '完成時間': item['完成時間'],
-      '照片數': countPhotos_(item)
+      '備註': item['備註'], '完成時間': item['完成時間'], '照片數': countPhotos_(item)
     };
   }).reverse();
   return {success: true, count: results.length, results: results};
@@ -381,6 +315,7 @@ function savePrivatePhoto_(prefix, dataUrl, fileName, mimeType) {
   if (!dataUrl) return '';
   const base64 = String(dataUrl).replace(/^data:.+;base64,/, '');
   const bytes = Utilities.base64Decode(base64);
+  if (bytes.length > MAX_PHOTO_BYTES) throw new Error('照片壓縮後仍超過限制，請重新選擇照片。');
   const ext = getExtension_(fileName, mimeType);
   const file = getPhotoFolder_().createFile(Utilities.newBlob(bytes, mimeType || 'image/jpeg', prefix + '_' + Date.now() + ext));
   file.setShareableByEditors(false);
@@ -414,16 +349,15 @@ function getExtension_(name, type) {
 }
 
 /******************** 通知與紀錄 ********************/
-function sendNewRepairNotice_(item, plannedPhotos) {
+function sendNewRepairNotice_(item, photoCount, failedPhotos) {
   if (!ADMIN_NOTIFY_EMAIL) return;
-  const photoMessage = plannedPhotos > 0
-    ? '預計附加照片：' + plannedPhotos + ' 張（照片可能仍在逐張上傳，請至管理後台查看）'
-    : '附加照片：無';
+  let photoText = photoCount ? '已附加照片：' + photoCount + ' 張' : '附加照片：無';
+  if (failedPhotos && failedPhotos.length) photoText += '\n照片上傳未成功：第 ' + failedPhotos.join('、') + ' 張';
   MailApp.sendEmail({
     to: ADMIN_NOTIFY_EMAIL,
     subject: '【南帝報修】新案件 ' + item['報修編號'] + '｜' + item['地點'],
     name: '南帝精密報修系統',
-    body: '有新的報修案件：\n\n報修編號：' + item['報修編號'] + '\n報修人：' + item['姓名'] + '\n部門：' + (item['部門'] || '-') + '\n地點：' + item['地點'] + '\n問題類型：' + item['問題類型'] + '\n緊急程度：' + item['緊急程度'] + '\n\n問題說明：\n' + item['問題說明'] + '\n\n' + photoMessage + '\n\n請至管理後台查看與處理。'
+    body: '有新的報修案件：\n\n報修編號：' + item['報修編號'] + '\n報修人：' + item['姓名'] + '\n部門：' + (item['部門'] || '-') + '\n地點：' + item['地點'] + '\n問題類型：' + item['問題類型'] + '\n緊急程度：' + item['緊急程度'] + '\n\n問題說明：\n' + item['問題說明'] + '\n\n' + photoText + '\n\n請至管理後台查看與處理。'
   });
 }
 
@@ -480,4 +414,3 @@ function generateCaseId_() { return 'R' + Utilities.formatDate(new Date(), TIME_
 function parseDateTime_(value) { const m = String(value || '').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}))?/); return m ? new Date(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0)) : null; }
 function parseDateOnly_(value) { const m = String(value || '').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; }
 function startOfToday_() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
-function outputJson_(object, e) { const cb = e && e.parameter ? String(e.parameter.callback || '') : ''; return cb && /^[A-Za-z_$][0-9A-Za-z_$]*$/.test(cb) ? ContentService.createTextOutput(cb + '(' + JSON.stringify(object) + ')').setMimeType(ContentService.MimeType.JAVASCRIPT) : ContentService.createTextOutput(JSON.stringify(object)).setMimeType(ContentService.MimeType.JSON); }
