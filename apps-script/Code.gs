@@ -11,6 +11,10 @@
  * - 員工送出不再經 GitHub 跨站 POST 後再查詢確認。
  * - 報修資料與照片在同一次 server call 完成，Sheet 僅寫入一次。
  * - 回傳各階段花費時間，便於判斷剩餘瓶頸。
+ *
+ * 2026-08-21 修正：
+ * - 管理後台登入 token 改用 ScriptProperties 保存，不再依賴 CacheService。
+ * - 避免剛重新登入後仍出現「管理登入已逾時」。
  ****************************************************/
 
 const SHEET_NAME = '報修單總表';
@@ -23,6 +27,7 @@ const TIME_ZONE = 'Asia/Taipei';
 const ADMIN_TOKEN_SECONDS = 60 * 60 * 6;
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_BYTES = 350 * 1024;
+const ADMIN_TOKEN_PREFIX = 'ADMIN_TOKEN_';
 
 const HEADERS = [
   '報修編號','建立時間','姓名','查詢碼','部門','報修人Email','地點',
@@ -199,19 +204,57 @@ function adminLogin(password) {
   if (String(password || '') !== ADMIN_PASSWORD || ADMIN_PASSWORD === '請改成正式管理密碼') {
     return {success: false, message: '管理密碼錯誤，或尚未設定正式管理密碼。'};
   }
+
+  cleanupExpiredAdminTokens_();
+
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
-  CacheService.getScriptCache().put('ADMIN_TOKEN_' + token, 'OK', ADMIN_TOKEN_SECONDS);
+  const expiresAt = Date.now() + ADMIN_TOKEN_SECONDS * 1000;
+  const value = JSON.stringify({createdAt: Date.now(), expiresAt: expiresAt});
+  PropertiesService.getScriptProperties().setProperty(ADMIN_TOKEN_PREFIX + token, value);
+
   return {success: true, token: token, expiresMinutes: ADMIN_TOKEN_SECONDS / 60};
 }
 
 function adminLogout(token) {
-  if (token) CacheService.getScriptCache().remove('ADMIN_TOKEN_' + token);
+  if (token) PropertiesService.getScriptProperties().deleteProperty(ADMIN_TOKEN_PREFIX + String(token));
   return {success: true};
 }
 
 function requireAdmin_(token) {
-  const ok = token && CacheService.getScriptCache().get('ADMIN_TOKEN_' + String(token));
-  if (!ok) throw new Error('管理登入已逾時，請重新登入。');
+  token = String(token || '').trim();
+  if (!token) throw new Error('管理登入已逾時，請重新登入。');
+
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty(ADMIN_TOKEN_PREFIX + token);
+  if (!raw) throw new Error('管理登入已逾時，請重新登入。');
+
+  let session;
+  try {
+    session = JSON.parse(raw);
+  } catch (error) {
+    props.deleteProperty(ADMIN_TOKEN_PREFIX + token);
+    throw new Error('管理登入已逾時，請重新登入。');
+  }
+
+  if (!session.expiresAt || Number(session.expiresAt) < Date.now()) {
+    props.deleteProperty(ADMIN_TOKEN_PREFIX + token);
+    throw new Error('管理登入已逾時，請重新登入。');
+  }
+}
+
+function cleanupExpiredAdminTokens_() {
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  const now = Date.now();
+  Object.keys(all).forEach(function(key) {
+    if (key.indexOf(ADMIN_TOKEN_PREFIX) !== 0) return;
+    try {
+      const session = JSON.parse(all[key]);
+      if (!session.expiresAt || Number(session.expiresAt) < now) props.deleteProperty(key);
+    } catch (error) {
+      props.deleteProperty(key);
+    }
+  });
 }
 
 /******************** 管理後台：清單、統計、更新、照片 ********************/
