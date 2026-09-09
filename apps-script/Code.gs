@@ -7,14 +7,13 @@
  * - 報修資料：Google Sheet
  * - 照片：Google Drive 私人檔案
  *
- * 加速重點：
- * - 員工送出不再經 GitHub 跨站 POST 後再查詢確認。
- * - 報修資料與照片在同一次 server call 完成，Sheet 僅寫入一次。
- * - 回傳各階段花費時間，便於判斷剩餘瓶頸。
- *
- * 2026-08-21 修正：
- * - 管理後台登入 token 改用 ScriptProperties 保存，不再依賴 CacheService。
- * - 避免剛重新登入後仍出現「管理登入已逾時」。
+ * v1.1 極簡改善版：
+ * - 問題類型新增「電梯」（前端選單處理，後端只檢查不可空白）
+ * - 新增「影片連結」欄位，不直接上傳影片，避免拖慢速度
+ * - 管理後台支援多狀態篩選，例如同時顯示「待處理」與「處理中」
+ * - 後台畫面把「負責人」改稱「處理廠商／窗口」，資料欄位仍沿用「負責人」以相容舊資料
+ * - 新增管理者刪除測試案件功能，會同步將照片移至 Google Drive 垃圾桶
+ * - 管理登入 token 改用 ScriptProperties 儲存，提高穩定性
  ****************************************************/
 
 const SHEET_NAME = '報修單總表';
@@ -27,12 +26,14 @@ const TIME_ZONE = 'Asia/Taipei';
 const ADMIN_TOKEN_SECONDS = 60 * 60 * 6;
 const MAX_PHOTOS = 3;
 const MAX_PHOTO_BYTES = 350 * 1024;
-const ADMIN_TOKEN_PREFIX = 'ADMIN_TOKEN_';
+
+const VALID_STATUSES = ['待處理','處理中','暫緩','已完成'];
 
 const HEADERS = [
   '報修編號','建立時間','姓名','查詢碼','部門','報修人Email','地點',
   '問題類型','緊急程度','問題說明',
   '照片檔案ID1','照片檔案ID2','照片檔案ID3',
+  '影片連結',
   '照片連結','照片連結2','照片連結3',
   '狀態','負責人','預定完成日','備註','完成時間','最後更新時間'
 ];
@@ -58,7 +59,7 @@ function setup() {
   }
 
   getPhotoFolder_();
-  Logger.log('報修系統 GAS 直連加速版初始化完成。');
+  Logger.log('報修系統 v1.1 初始化完成。');
 }
 
 /******************** Web App 頁面入口 ********************/
@@ -82,6 +83,7 @@ function employeeSubmitRepair(payload) {
   const location = String(payload.location || '').trim();
   const category = String(payload.category || '').trim();
   const description = String(payload.description || '').trim();
+  const videoUrl = normalizeUrl_(payload.videoUrl || payload['影片連結'] || '');
   const photos = Array.isArray(payload.photos) ? payload.photos.slice(0, MAX_PHOTOS) : [];
 
   if (!name) throw new Error('請填寫姓名。');
@@ -89,6 +91,7 @@ function employeeSubmitRepair(payload) {
   if (!location) throw new Error('請填寫地點。');
   if (!category) throw new Error('請選擇問題類型。');
   if (!description) throw new Error('請填寫問題說明。');
+  if (videoUrl && !/^https?:\/\//i.test(videoUrl)) throw new Error('影片連結請以 http:// 或 https:// 開頭。');
 
   const caseId = generateCaseId_();
   const now = new Date();
@@ -126,6 +129,7 @@ function employeeSubmitRepair(payload) {
     '照片檔案ID1': photoIds[0],
     '照片檔案ID2': photoIds[1],
     '照片檔案ID3': photoIds[2],
+    '影片連結': videoUrl,
     '照片連結': '', '照片連結2': '', '照片連結3': '',
     '狀態': '待處理', '負責人': '', '預定完成日': '', '備註': '',
     '完成時間': '', '最後更新時間': now
@@ -192,6 +196,7 @@ function toEmployeeSafeItem_(item) {
     '問題類型': item['問題類型'],
     '緊急程度': item['緊急程度'],
     '問題說明': item['問題說明'],
+    '影片連結': item['影片連結'],
     '狀態': item['狀態'],
     '預定完成日': item['預定完成日'],
     '備註': item['備註'],
@@ -204,76 +209,60 @@ function adminLogin(password) {
   if (String(password || '') !== ADMIN_PASSWORD || ADMIN_PASSWORD === '請改成正式管理密碼') {
     return {success: false, message: '管理密碼錯誤，或尚未設定正式管理密碼。'};
   }
-
-  cleanupExpiredAdminTokens_();
-
   const token = Utilities.getUuid().replace(/-/g, '') + Utilities.getUuid().replace(/-/g, '');
   const expiresAt = Date.now() + ADMIN_TOKEN_SECONDS * 1000;
-  const value = JSON.stringify({createdAt: Date.now(), expiresAt: expiresAt});
-  PropertiesService.getScriptProperties().setProperty(ADMIN_TOKEN_PREFIX + token, value);
-
+  PropertiesService.getScriptProperties().setProperty('ADMIN_TOKEN_' + token, String(expiresAt));
   return {success: true, token: token, expiresMinutes: ADMIN_TOKEN_SECONDS / 60};
 }
 
 function adminLogout(token) {
-  if (token) PropertiesService.getScriptProperties().deleteProperty(ADMIN_TOKEN_PREFIX + String(token));
+  if (token) PropertiesService.getScriptProperties().deleteProperty('ADMIN_TOKEN_' + String(token));
   return {success: true};
 }
 
 function requireAdmin_(token) {
   token = String(token || '').trim();
   if (!token) throw new Error('管理登入已逾時，請重新登入。');
-
+  const key = 'ADMIN_TOKEN_' + token;
   const props = PropertiesService.getScriptProperties();
-  const raw = props.getProperty(ADMIN_TOKEN_PREFIX + token);
-  if (!raw) throw new Error('管理登入已逾時，請重新登入。');
-
-  let session;
-  try {
-    session = JSON.parse(raw);
-  } catch (error) {
-    props.deleteProperty(ADMIN_TOKEN_PREFIX + token);
-    throw new Error('管理登入已逾時，請重新登入。');
-  }
-
-  if (!session.expiresAt || Number(session.expiresAt) < Date.now()) {
-    props.deleteProperty(ADMIN_TOKEN_PREFIX + token);
+  const expiresAt = Number(props.getProperty(key) || 0);
+  if (!expiresAt || expiresAt < Date.now()) {
+    props.deleteProperty(key);
     throw new Error('管理登入已逾時，請重新登入。');
   }
 }
 
-function cleanupExpiredAdminTokens_() {
-  const props = PropertiesService.getScriptProperties();
-  const all = props.getProperties();
-  const now = Date.now();
-  Object.keys(all).forEach(function(key) {
-    if (key.indexOf(ADMIN_TOKEN_PREFIX) !== 0) return;
-    try {
-      const session = JSON.parse(all[key]);
-      if (!session.expiresAt || Number(session.expiresAt) < now) props.deleteProperty(key);
-    } catch (error) {
-      props.deleteProperty(key);
-    }
-  });
-}
-
-/******************** 管理後台：清單、統計、更新、照片 ********************/
-function adminListRepairs(token, filterStatus) {
+/******************** 管理後台：清單、統計、更新、照片、刪除測試案件 ********************/
+function adminListRepairs(token, filterStatuses) {
   requireAdmin_(token);
-  const status = String(filterStatus || '待處理').trim();
+  const statuses = normalizeStatusFilter_(filterStatuses);
+  const showAll = statuses.indexOf('全部') >= 0;
   const results = getDataObjects_().filter(function(item) {
     const value = String(item['狀態'] || '待處理').trim() || '待處理';
-    return status === '全部' || value === status;
+    return showAll || statuses.indexOf(value) >= 0;
   }).map(function(item) {
     return {
       '報修編號': item['報修編號'], '建立時間': item['建立時間'], '姓名': item['姓名'],
       '部門': item['部門'], '報修人Email': item['報修人Email'], '地點': item['地點'],
       '問題類型': item['問題類型'], '緊急程度': item['緊急程度'], '問題說明': item['問題說明'],
+      '影片連結': item['影片連結'],
       '狀態': item['狀態'], '負責人': item['負責人'], '預定完成日': item['預定完成日'],
       '備註': item['備註'], '完成時間': item['完成時間'], '照片數': countPhotos_(item)
     };
   }).reverse();
   return {success: true, count: results.length, results: results};
+}
+
+function normalizeStatusFilter_(filterStatuses) {
+  let statuses = [];
+  if (Array.isArray(filterStatuses)) {
+    statuses = filterStatuses.map(function(s){ return String(s || '').trim(); }).filter(Boolean);
+  } else {
+    const value = String(filterStatuses || '').trim();
+    statuses = value ? [value] : ['待處理','處理中'];
+  }
+  statuses = statuses.filter(function(s){ return s === '全部' || VALID_STATUSES.indexOf(s) >= 0; });
+  return statuses.length ? statuses : ['待處理','處理中'];
 }
 
 function adminGetStats(token) {
@@ -306,8 +295,8 @@ function adminUpdateRepair(token, payload) {
   const dueDate = String(payload.dueDate || '').trim();
   const note = String(payload.note || '').trim();
   if (!caseId) throw new Error('請先選擇案件。');
-  if (!['待處理','處理中','暫緩','已完成'].includes(status)) throw new Error('狀態不正確。');
-  if ((status === '處理中' || status === '已完成') && !owner) throw new Error('處理中或已完成案件，請填寫負責人。');
+  if (VALID_STATUSES.indexOf(status) < 0) throw new Error('狀態不正確。');
+  if ((status === '處理中' || status === '已完成') && !owner) throw new Error('處理中或已完成案件，請填寫處理廠商／窗口。');
   if ((status === '暫緩' || status === '已完成') && !note) throw new Error('暫緩或已完成案件，請填寫備註說明。');
 
   const sheet = getSheet_();
@@ -340,10 +329,43 @@ function adminUpdateRepair(token, payload) {
   return {success: true, message: '案件已更新'};
 }
 
+function adminDeleteTestRepair(token, caseId, confirmText) {
+  requireAdmin_(token);
+  caseId = String(caseId || '').trim();
+  confirmText = String(confirmText || '').trim();
+  if (!caseId) throw new Error('請先選擇案件。');
+  if (confirmText !== '刪除' && confirmText.toUpperCase() !== 'DELETE') throw new Error('確認文字不正確，請輸入「刪除」或 DELETE。');
+
+  const sheet = getSheet_();
+  const map = getHeaderMap_(sheet);
+  const data = sheet.getDataRange().getValues();
+  let rowNo = -1, item = null;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][map['報修編號']] || '').trim() === caseId) {
+      rowNo = i + 1;
+      item = rowArrayToObject_(data[0], data[i]);
+      break;
+    }
+  }
+  if (rowNo < 0 || !item) throw new Error('找不到此報修編號。');
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    getPhotoFileIds_(item).forEach(function(fileId) {
+      try { DriveApp.getFileById(fileId).setTrashed(true); } catch (error) { Logger.log('刪除照片失敗：' + fileId + ' / ' + error.message); }
+    });
+    sheet.deleteRow(rowNo);
+    appendLog_(caseId, item['狀態'], '刪除測試案件', item['負責人'] || '', item['預定完成日'] || '', '管理者刪除測試案件');
+  } finally { lock.releaseLock(); }
+
+  return {success: true, message: '測試案件已刪除，相關照片已移至垃圾桶。'};
+}
+
 function adminGetPhoto(token, caseId, photoNumber) {
   requireAdmin_(token);
   const index = Number(photoNumber);
-  if (![1, 2, 3].includes(index)) throw new Error('照片編號不正確。');
+  if (![1, 2, 3].indexOf(index) < 0) throw new Error('照片編號不正確。');
   const item = getRepairByCaseId_(String(caseId || '').trim());
   if (!item) throw new Error('找不到此案件。');
   const fileId = resolvePhotoFileId_(item, index);
@@ -366,9 +388,16 @@ function savePrivatePhoto_(prefix, dataUrl, fileName, mimeType) {
 }
 
 function countPhotos_(item) {
-  let count = 0;
-  [1,2,3].forEach(function(i) { if (resolvePhotoFileId_(item, i)) count++; });
-  return count;
+  return getPhotoFileIds_(item).length;
+}
+
+function getPhotoFileIds_(item) {
+  const ids = [];
+  [1,2,3].forEach(function(i) {
+    const fileId = resolvePhotoFileId_(item, i);
+    if (fileId) ids.push(fileId);
+  });
+  return ids;
 }
 
 function resolvePhotoFileId_(item, number) {
@@ -396,11 +425,12 @@ function sendNewRepairNotice_(item, photoCount, failedPhotos) {
   if (!ADMIN_NOTIFY_EMAIL) return;
   let photoText = photoCount ? '已附加照片：' + photoCount + ' 張' : '附加照片：無';
   if (failedPhotos && failedPhotos.length) photoText += '\n照片上傳未成功：第 ' + failedPhotos.join('、') + ' 張';
+  const videoText = item['影片連結'] ? '\n影片連結：' + item['影片連結'] : '';
   MailApp.sendEmail({
     to: ADMIN_NOTIFY_EMAIL,
     subject: '【南帝報修】新案件 ' + item['報修編號'] + '｜' + item['地點'],
     name: '南帝精密報修系統',
-    body: '有新的報修案件：\n\n報修編號：' + item['報修編號'] + '\n報修人：' + item['姓名'] + '\n部門：' + (item['部門'] || '-') + '\n地點：' + item['地點'] + '\n問題類型：' + item['問題類型'] + '\n緊急程度：' + item['緊急程度'] + '\n\n問題說明：\n' + item['問題說明'] + '\n\n' + photoText + '\n\n請至管理後台查看與處理。'
+    body: '有新的報修案件：\n\n報修編號：' + item['報修編號'] + '\n報修人：' + item['姓名'] + '\n部門：' + (item['部門'] || '-') + '\n地點：' + item['地點'] + '\n問題類型：' + item['問題類型'] + '\n緊急程度：' + item['緊急程度'] + '\n\n問題說明：\n' + item['問題說明'] + '\n\n' + photoText + videoText + '\n\n請至管理後台查看與處理。'
   });
 }
 
@@ -411,7 +441,7 @@ function sendCompletionNotice_(oldItem, newItem) {
     to: String(newItem['報修人Email']).trim(),
     subject: '【南帝報修】您的案件已完成｜' + newItem['報修編號'],
     name: '南帝精密報修系統',
-    body: '您好，您的報修案件已完成。\n\n報修編號：' + newItem['報修編號'] + '\n地點：' + newItem['地點'] + '\n問題：' + newItem['問題說明'] + '\n\n負責人：' + (newItem['負責人'] || '-') + '\n備註：' + (newItem['備註'] || '-')
+    body: '您好，您的報修案件已完成。\n\n報修編號：' + newItem['報修編號'] + '\n地點：' + newItem['地點'] + '\n問題：' + newItem['問題說明'] + '\n\n處理廠商／窗口：' + (newItem['負責人'] || '-') + '\n備註：' + (newItem['備註'] || '-')
   });
 }
 
@@ -457,3 +487,4 @@ function generateCaseId_() { return 'R' + Utilities.formatDate(new Date(), TIME_
 function parseDateTime_(value) { const m = String(value || '').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})(?:\s+(\d{1,2}):(\d{1,2}))?/); return m ? new Date(+m[1], +m[2]-1, +m[3], +(m[4]||0), +(m[5]||0)) : null; }
 function parseDateOnly_(value) { const m = String(value || '').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m ? new Date(+m[1], +m[2]-1, +m[3]) : null; }
 function startOfToday_() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+function normalizeUrl_(value) { return String(value || '').trim(); }
