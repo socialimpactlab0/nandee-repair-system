@@ -19,8 +19,8 @@
 const SHEET_NAME = '報修單總表';
 const LOG_SHEET_NAME = '處理紀錄';
 const PHOTO_FOLDER_NAME = '南帝報修圖片';
-const ADMIN_PASSWORD = '請改成正式管理密碼';
-const ADMIN_NOTIFY_EMAIL = 'flt.roger@gmail.com';
+const ADMIN_PASSWORD = '1234';
+const ADMIN_NOTIFY_EMAIL = 'admin1@ndd.com.tw,mira@ndd.com.tw,fang@ndd.com.tw';
 const SPREADSHEET_ID = '';
 const TIME_ZONE = 'Asia/Taipei';
 const ADMIN_TOKEN_SECONDS = 60 * 60 * 6;
