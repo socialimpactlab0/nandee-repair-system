@@ -18,6 +18,7 @@
     .repair{border:1px solid var(--border);background:#fff;border-radius:12px;padding:14px;margin-top:12px}.repair.urgent{border-left:5px solid #d33;background:#fff4f4}.repair-id{font-weight:bold;color:var(--main);font-size:18px;margin-bottom:7px}.status{display:inline-block;border-radius:999px;padding:4px 10px;font-weight:bold;background:#eee;margin-bottom:6px}.待處理{background:#fff2cc}.處理中{background:#d9eaf7}.暫緩{background:#eadcf8}.已完成{background:#d9ead3}.row{line-height:1.8;word-break:break-word}.selected{margin-top:14px;background:var(--warn);border-left:5px solid #f6b400;border-radius:10px;padding:12px;line-height:1.7}.quick{margin-top:14px;background:#f7f8fa;border:1px solid var(--border);padding:12px;border-radius:12px}.quick strong{color:var(--main)}
     .photo-modal{position:fixed;inset:0;background:#000b;display:flex;align-items:center;justify-content:center;padding:20px;z-index:99}.photo-box{background:#fff;border-radius:14px;padding:14px;max-width:92vw;max-height:92vh}.photo-box img{display:block;max-width:85vw;max-height:76vh;margin:auto}.photo-box .btn{margin-top:10px}
     .top-actions{display:flex;justify-content:flex-end;margin-bottom:10px}.logout{width:auto;margin:0;background:#555;padding:9px 14px;font-size:14px}.delete-box{margin-top:14px;border:1px solid #e5b0b0;background:#fff7f7;border-radius:12px;padding:12px}
+    .analysis-panel{margin-top:18px;border-top:2px solid #dce6ef;padding-top:18px}.analysis-tools{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:10px}.analysis-tools label{margin-top:0}.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:12px;margin-top:12px;max-height:560px}table{width:100%;border-collapse:collapse;min-width:1080px;background:#fff}th,td{padding:9px 8px;border-bottom:1px solid #e5e9ed;text-align:left;vertical-align:top;font-size:14px}th{position:sticky;top:0;background:#eaf2f8;color:#173d5f;z-index:2;white-space:nowrap}.group-row td{background:#dceaf5!important;font-weight:bold;color:#173d5f}.check-cell{width:44px;text-align:center}.check-cell input{width:auto}.small{font-size:13px;color:#666}.urgent-text{color:#b42318;font-weight:bold}.mini{border:0;border-radius:7px;padding:6px 9px;cursor:pointer;background:var(--main);color:#fff;font-size:13px}.batch-box{margin-top:16px;padding:14px;border:1px solid #bfd0de;border-radius:12px;background:#f5f9fc}.batch-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.batch-count{font-weight:bold;color:var(--main)}.batch-actions{display:flex;gap:8px;flex-wrap:wrap}.batch-actions .btn{width:auto;margin-top:8px}.analysis-summary{margin-top:10px;font-weight:bold;color:#38566f}
     a{color:var(--main);font-weight:bold}@media(max-width:700px){.hero h1{font-size:23px}.card{padding:17px}.grid2,.stats-grid{grid-template-columns:1fr}.toolbar .actions{display:block}.toolbar .actions .btn{margin-top:10px}}
   </style>
 </head>
@@ -44,9 +45,51 @@
         </div>
         <div class="hint">預設顯示「待處理＋處理中」，方便看尚未結案案件。</div>
       </div>
-      <div class="actions"><button class="btn" onclick="loadCases()">列出案件</button><button id="statsBtn" class="btn" onclick="toggleStats()">查看統計</button></div>
+      <div class="actions"><button class="btn" onclick="loadCases()">列出案件</button><button id="analysisBtn" class="btn" onclick="toggleAnalysis()">案件整理／統計</button></div>
     </div>
-    <div id="statsResult" class="result hidden"></div>
+    <div id="analysisPanel" class="analysis-panel hidden">
+      <h3>案件整理／統計</h3>
+      <div class="hint">可像 Excel 一樣篩選、排序、依廠商或地點歸類，再勾選多筆案件統一叫修。</div>
+      <div id="statsResult" class="result"></div>
+
+      <div class="analysis-tools">
+        <div><label>案件狀態</label><select id="aStatus" onchange="renderAnalysis()"><option value="open">未結案</option><option value="">全部</option><option>待處理</option><option>處理中</option><option>暫緩</option><option>已完成</option></select></div>
+        <div><label>處理廠商／窗口</label><select id="aOwner" onchange="renderAnalysis()"><option value="">全部</option></select></div>
+        <div><label>報修地點</label><select id="aLocation" onchange="renderAnalysis()"><option value="">全部</option></select></div>
+        <div><label>問題類型</label><select id="aCategory" onchange="renderAnalysis()"><option value="">全部</option></select></div>
+        <div><label>緊急程度</label><select id="aUrgency" onchange="renderAnalysis()"><option value="">全部</option><option>一般</option><option>急件</option><option>停工／危險</option></select></div>
+        <div><label>關鍵字搜尋</label><input id="aSearch" type="search" placeholder="編號、姓名、地點、問題、廠商" oninput="renderAnalysis()"></div>
+        <div><label>歸類方式</label><select id="aGroup" onchange="renderAnalysis()"><option value="">不分組</option><option value="owner">依處理廠商／窗口</option><option value="location">依報修地點</option><option value="category">依問題類型</option><option value="status">依案件狀態</option></select></div>
+        <div><label>排序欄位</label><select id="aSort" onchange="renderAnalysis()"><option value="建立時間">建立時間</option><option value="狀態">狀態</option><option value="負責人">處理廠商／窗口</option><option value="地點">報修地點</option><option value="問題類型">問題類型</option><option value="預定完成日">預定完成日</option></select></div>
+        <div><label>排序方向</label><select id="aDir" onchange="renderAnalysis()"><option value="-1">新到舊／Z→A</option><option value="1">舊到新／A→Z</option></select></div>
+      </div>
+
+      <div class="batch-actions">
+        <button class="btn inline-btn" onclick="selectAllFiltered(true)">勾選目前篩選結果</button>
+        <button class="btn inline-btn secondary" onclick="selectAllFiltered(false)">清除勾選</button>
+      </div>
+      <div id="analysisSummary" class="analysis-summary"></div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th class="check-cell">選取</th><th>報修編號</th><th>狀態</th><th>處理廠商／窗口</th><th>報修地點</th><th>問題類型</th><th>緊急</th><th>建立時間</th><th>問題</th><th>預定完成日</th><th>操作</th></tr></thead>
+          <tbody id="analysisBody"></tbody>
+        </table>
+      </div>
+
+      <div class="batch-box">
+        <div class="batch-head"><strong>統一叫修／批次處理</strong><span id="batchCount" class="batch-count">已勾選 0 件</span></div>
+        <div class="hint">空白欄位代表不更改；批次備註會加在原本備註後面，不會覆蓋原資料。</div>
+        <div class="grid2">
+          <div><label>狀態</label><select id="batchStatus"><option value="">不更改</option><option>待處理</option><option>處理中</option><option>暫緩</option><option>已完成</option></select></div>
+          <div><label>處理廠商／窗口</label><input id="batchOwner" list="vendorOptions" placeholder="例如：水電廠商"></div>
+          <div><label>預定完成日</label><input id="batchDueDate" type="date"></div>
+        </div>
+        <label>批次備註</label><textarea id="batchNote" placeholder="例如：已統一通知水電廠商安排處理。"></textarea>
+        <button id="batchBtn" class="btn" onclick="batchUpdate()">套用至已勾選案件</button>
+        <div id="batchResult" class="result"></div>
+      </div>
+    </div>
     <div id="listResult" class="result"></div>
     <div id="selectedInfo" class="selected hidden"></div>
     <div id="editArea" class="hidden">
@@ -63,26 +106,125 @@
 </div>
 <div id="photoModal" class="photo-modal hidden"><div class="photo-box"><img id="photoImg" alt="案件照片"><button class="btn secondary" onclick="closePhoto()">關閉照片</button></div></div>
 <script>
-let token='';let cases=[];
+let token='';let cases=[];let analysisCases=[];let analysisView=[];let selectedIds=new Set();let analysisLoaded=false;
 function box(id,msg,type){const b=document.getElementById(id);b.textContent=msg;b.className='result '+type;}
 function hide(id){document.getElementById(id).classList.add('hidden')}
 function show(id){document.getElementById(id).classList.remove('hidden')}
 function escapeHtml(t){return String(t??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;')}
 function safeUrl(u){u=String(u||'').trim();return /^https?:\/\//i.test(u)?u:''}
-function login(){const pw=document.getElementById('password').value,btn=document.getElementById('loginBtn');if(!pw){box('loginResult','請輸入管理密碼。','error');return}btn.disabled=true;btn.textContent='登入中…';google.script.run.withSuccessHandler(function(res){btn.disabled=false;btn.textContent='登入管理後台';if(!res.success){box('loginResult',res.message,'error');return}token=res.token;hide('loginCard');show('dashboard');hide('statsResult');document.getElementById('statsBtn').textContent='查看統計';loadCases();}).withFailureHandler(function(err){btn.disabled=false;btn.textContent='登入管理後台';box('loginResult',err.message||'登入失敗。','error');}).adminLogin(pw)}
-function logout(){google.script.run.adminLogout(token);token='';cases=[];hide('statsResult');document.getElementById('statsBtn').textContent='查看統計';hide('dashboard');show('loginCard');document.getElementById('password').value='';box('loginResult','已登出管理後台。','notice')}
+function login(){const pw=document.getElementById('password').value,btn=document.getElementById('loginBtn');if(!pw){box('loginResult','請輸入管理密碼。','error');return}btn.disabled=true;btn.textContent='登入中…';google.script.run.withSuccessHandler(function(res){btn.disabled=false;btn.textContent='登入管理後台';if(!res.success){box('loginResult',res.message,'error');return}token=res.token;hide('loginCard');show('dashboard');hide('analysisPanel');document.getElementById('analysisBtn').textContent='案件整理／統計';loadCases();}).withFailureHandler(function(err){btn.disabled=false;btn.textContent='登入管理後台';box('loginResult',err.message||'登入失敗。','error');}).adminLogin(pw)}
+function logout(){google.script.run.adminLogout(token);token='';cases=[];analysisCases=[];analysisView=[];selectedIds.clear();analysisLoaded=false;hide('analysisPanel');document.getElementById('analysisBtn').textContent='案件整理／統計';hide('dashboard');show('loginCard');document.getElementById('password').value='';box('loginResult','已登出管理後台。','notice')}
 function fail(id,err){box(id,err.message||'操作失敗，請重新登入再試。','error')}
 function toggleAllStatus(){const all=document.getElementById('allStatus').checked;document.querySelectorAll('input[name="filterStatus"]').forEach(cb=>cb.checked=false);}
 function selectedStatuses(){if(document.getElementById('allStatus').checked)return ['全部'];const arr=[...document.querySelectorAll('input[name="filterStatus"]:checked')].map(cb=>cb.value);return arr.length?arr:['待處理','處理中']}
 function statusLabel(){const arr=selectedStatuses();return arr.indexOf('全部')>=0?'全部':arr.join('＋')}
-function toggleStats(){const panel=document.getElementById('statsResult'),btn=document.getElementById('statsBtn');if(!panel.classList.contains('hidden')){hide('statsResult');btn.textContent='查看統計';return}btn.textContent='隱藏統計';box('statsResult','統計讀取中…','notice');loadStats()}
-function loadStats(){google.script.run.withSuccessHandler(function(res){let html='<strong>案件統計</strong><div class="stats-grid">';['全部','待處理','處理中','暫緩','已完成','逾期','本月新增','平均完成天數'].forEach(function(k){html+='<div class="stat"><div>'+k+'</div><div class="stat-num">'+escapeHtml(res.stats[k]??0)+'</div></div>'});html+='</div>';const b=document.getElementById('statsResult');b.innerHTML=html;b.className='result success';}).withFailureHandler(function(err){fail('statsResult',err)}).adminGetStats(token)}
+function toggleAnalysis(){
+  const panel=document.getElementById('analysisPanel'),btn=document.getElementById('analysisBtn');
+  if(!panel.classList.contains('hidden')){hide('analysisPanel');btn.textContent='案件整理／統計';return}
+  show('analysisPanel');btn.textContent='隱藏案件整理';
+  if(!analysisLoaded)loadAnalysis();else renderAnalysis()
+}
+function loadStats(){
+  google.script.run.withSuccessHandler(function(res){
+    let html='<strong>快速統計</strong><div class="stats-grid">';
+    ['全部','待處理','處理中','暫緩','已完成','逾期','本月新增','平均完成天數'].forEach(function(k){html+='<div class="stat"><div>'+k+'</div><div class="stat-num">'+escapeHtml(res.stats[k]??0)+'</div></div>'});
+    html+='</div>';const b=document.getElementById('statsResult');b.innerHTML=html;b.className='result success';
+  }).withFailureHandler(function(err){fail('statsResult',err)}).adminGetStats(token)
+}
+function loadAnalysis(){
+  box('statsResult','統計與案件資料讀取中…','notice');loadStats();
+  google.script.run.withSuccessHandler(function(res){
+    analysisCases=res.results||[];analysisLoaded=true;buildAnalysisOptions();renderAnalysis();
+  }).withFailureHandler(function(err){fail('statsResult',err)}).adminListRepairs(token,['全部'])
+}
+function uniqueValues(key){return [...new Set(analysisCases.map(function(x){return String(x[key]||'').trim()}).filter(Boolean))].sort(function(a,b){return a.localeCompare(b,'zh-Hant')})}
+function fillSelect(id,values){
+  const sel=document.getElementById(id),old=sel.value;
+  sel.innerHTML='<option value="">全部</option>'+values.map(function(v){return '<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>'}).join('');
+  if(values.indexOf(old)>=0)sel.value=old
+}
+function buildAnalysisOptions(){fillSelect('aOwner',uniqueValues('負責人'));fillSelect('aLocation',uniqueValues('地點'));fillSelect('aCategory',uniqueValues('問題類型'))}
+function getAnalysisFiltered(){
+  const st=document.getElementById('aStatus').value,owner=document.getElementById('aOwner').value,loc=document.getElementById('aLocation').value,cat=document.getElementById('aCategory').value,urg=document.getElementById('aUrgency').value,q=document.getElementById('aSearch').value.trim().toLowerCase();
+  let arr=analysisCases.filter(function(x){
+    const status=String(x['狀態']||'待處理');
+    if(st==='open'&&['待處理','處理中','暫緩'].indexOf(status)<0)return false;
+    if(st&&st!=='open'&&status!==st)return false;
+    if(owner&&String(x['負責人']||'')!==owner)return false;
+    if(loc&&String(x['地點']||'')!==loc)return false;
+    if(cat&&String(x['問題類型']||'')!==cat)return false;
+    if(urg&&String(x['緊急程度']||'一般')!==urg)return false;
+    if(q){const hay=[x['報修編號'],x['姓名'],x['部門'],x['負責人'],x['地點'],x['問題類型'],x['問題說明'],x['備註']].join(' ').toLowerCase();if(hay.indexOf(q)<0)return false}
+    return true
+  });
+  const key=document.getElementById('aSort').value,dir=Number(document.getElementById('aDir').value||-1);
+  arr.sort(function(a,b){return String(a[key]||'').localeCompare(String(b[key]||''),'zh-Hant',{numeric:true})*dir});
+  return arr
+}
+function analysisGroupValue(item,group){
+  if(group==='owner')return String(item['負責人']||'').trim()||'尚未指定廠商／窗口';
+  if(group==='location')return String(item['地點']||'').trim()||'未填地點';
+  if(group==='category')return String(item['問題類型']||'').trim()||'未分類';
+  if(group==='status')return String(item['狀態']||'待處理');
+  return ''
+}
+function analysisRowHtml(item,index){
+  const id=String(item['報修編號']||''),checked=selectedIds.has(id)?' checked':'',urgent=item['緊急程度']==='急件'||item['緊急程度']==='停工／危險';
+  return '<tr><td class="check-cell"><input type="checkbox" data-index="'+index+'" onchange="toggleSelected(this)"'+checked+'></td>'+
+    '<td><strong>'+escapeHtml(id)+'</strong><div class="small">'+escapeHtml(item['姓名']||'')+'</div></td>'+
+    '<td>'+escapeHtml(item['狀態']||'待處理')+'</td><td>'+escapeHtml(item['負責人']||'尚未指定')+'</td><td>'+escapeHtml(item['地點']||'')+'</td><td>'+escapeHtml(item['問題類型']||'')+'</td>'+
+    '<td class="'+(urgent?'urgent-text':'')+'">'+escapeHtml(item['緊急程度']||'一般')+'</td><td>'+escapeHtml(item['建立時間']||'')+'</td><td>'+escapeHtml(item['問題說明']||'')+'</td><td>'+escapeHtml(item['預定完成日']||'-')+'</td>'+
+    '<td><button class="mini" onclick="selectAnalysisRow('+index+')">處理</button></td></tr>'
+}
+function renderAnalysis(){
+  if(!analysisLoaded)return;
+  analysisView=getAnalysisFiltered();
+  const group=document.getElementById('aGroup').value;
+  let html='';
+  if(group){
+    const groups={};analysisView.forEach(function(item){const g=analysisGroupValue(item,group);if(!groups[g])groups[g]=[];groups[g].push(item)});
+    Object.keys(groups).sort(function(a,b){return a.localeCompare(b,'zh-Hant',{numeric:true})}).forEach(function(g){
+      html+='<tr class="group-row"><td colspan="11">'+escapeHtml(g)+'（'+groups[g].length+' 件）</td></tr>';
+      groups[g].forEach(function(item){html+=analysisRowHtml(item,analysisView.indexOf(item))})
+    })
+  }else analysisView.forEach(function(item,index){html+=analysisRowHtml(item,index)});
+  if(!analysisView.length)html='<tr><td colspan="11">目前沒有符合篩選條件的案件。</td></tr>';
+  document.getElementById('analysisBody').innerHTML=html;
+  document.getElementById('analysisSummary').textContent='目前顯示 '+analysisView.length+' 件；已勾選 '+selectedIds.size+' 件。';
+  updateBatchCount()
+}
+function toggleSelected(cb){
+  const item=analysisView[Number(cb.dataset.index)];if(!item)return;
+  const id=String(item['報修編號']||'');if(cb.checked)selectedIds.add(id);else selectedIds.delete(id);
+  document.getElementById('analysisSummary').textContent='目前顯示 '+analysisView.length+' 件；已勾選 '+selectedIds.size+' 件。';updateBatchCount()
+}
+function selectAllFiltered(on){getAnalysisFiltered().forEach(function(x){const id=String(x['報修編號']||'');if(on)selectedIds.add(id);else selectedIds.delete(id)});renderAnalysis()}
+function updateBatchCount(){document.getElementById('batchCount').textContent='已勾選 '+selectedIds.size+' 件'}
+function selectAnalysisRow(index){const item=analysisView[index];if(item)selectItem(item)}
+function batchUpdate(){
+  const ids=[...selectedIds];if(!ids.length){box('batchResult','請先勾選至少一件案件。','error');return}
+  const payload={caseIds:ids,status:document.getElementById('batchStatus').value,owner:document.getElementById('batchOwner').value.trim(),dueDate:document.getElementById('batchDueDate').value,note:document.getElementById('batchNote').value.trim()};
+  if(!payload.status&&!payload.owner&&!payload.dueDate&&!payload.note){box('batchResult','請至少填一項要批次更新的內容。','error');return}
+  if(!confirm('確定要將設定套用到 '+ids.length+' 件案件嗎？'))return;
+  const btn=document.getElementById('batchBtn');btn.disabled=true;btn.textContent='批次更新中…';
+  google.script.run.withSuccessHandler(function(res){
+    btn.disabled=false;btn.textContent='套用至已勾選案件';box('batchResult',res.message||'批次更新完成。','success');selectedIds.clear();
+    document.getElementById('batchStatus').value='';document.getElementById('batchOwner').value='';document.getElementById('batchDueDate').value='';document.getElementById('batchNote').value='';
+    analysisLoaded=false;loadCases();loadAnalysis();
+  }).withFailureHandler(function(err){btn.disabled=false;btn.textContent='套用至已勾選案件';fail('batchResult',err)}).adminBatchUpdateRepairs(token,payload)
+}
 function loadCases(){const statuses=selectedStatuses();hide('selectedInfo');hide('editArea');box('listResult','案件讀取中…','notice');google.script.run.withSuccessHandler(function(res){cases=res.results||[];if(!cases.length){box('listResult','目前沒有符合條件的案件。','success');return}let html='<strong>'+escapeHtml(statusLabel())+'：'+res.count+' 筆</strong>';cases.forEach(function(item,i){const urgent=item['緊急程度']==='急件'||item['緊急程度']==='停工／危險'?' urgent':'';const video=safeUrl(item['影片連結']);html+='<div class="repair'+urgent+'"><div class="repair-id">'+escapeHtml(item['報修編號'])+'</div><div class="status '+escapeHtml(item['狀態']||'待處理')+'">'+escapeHtml(item['狀態']||'待處理')+'</div><div class="row"><strong>時間：</strong>'+escapeHtml(item['建立時間'])+'</div><div class="row"><strong>報修人：</strong>'+escapeHtml(item['姓名'])+'　'+escapeHtml(item['部門']||'')+'</div><div class="row"><strong>地點：</strong>'+escapeHtml(item['地點'])+'</div><div class="row"><strong>類型／緊急：</strong>'+escapeHtml(item['問題類型'])+'／'+escapeHtml(item['緊急程度']||'一般')+'</div><div class="row"><strong>問題：</strong>'+escapeHtml(item['問題說明'])+'</div>';if(video){html+='<div class="row"><strong>影片：</strong><a href="'+escapeHtml(video)+'" target="_blank" rel="noopener">開啟影片連結</a></div>'}html+='<div class="row"><strong>處理廠商／窗口：</strong>'+escapeHtml(item['負責人']||'-')+'</div><div class="row"><strong>預定完成日：</strong>'+escapeHtml(item['預定完成日']||'-')+'</div><div class="row"><strong>備註：</strong>'+escapeHtml(item['備註']||'-')+'</div>';for(let n=1;n<=Number(item['照片數']||0);n++){html+='<button type="button" class="btn inline-btn" onclick="openPhoto('+i+','+n+')">查看照片 '+n+'</button>'}html+='<button type="button" class="btn inline-btn secondary" onclick="selectCase('+i+')">選擇此案件</button></div>'});const b=document.getElementById('listResult');b.innerHTML=html;b.className='result success';}).withFailureHandler(function(err){fail('listResult',err)}).adminListRepairs(token,statuses)}
-function selectCase(index){const item=cases[index];if(!item)return;const oldStatus=item['狀態']||'待處理',nextStatus=oldStatus==='待處理'?'處理中':oldStatus;document.getElementById('caseId').value=item['報修編號']||'';document.getElementById('status').value=nextStatus;document.getElementById('owner').value=item['負責人']||'';document.getElementById('dueDate').value=toDate(item['預定完成日']);document.getElementById('note').value=item['備註']||'';const s=document.getElementById('selectedInfo');s.innerHTML='<strong>已選擇案件：</strong>'+escapeHtml(item['報修編號'])+'<br><strong>地點：</strong>'+escapeHtml(item['地點'])+'<br><strong>問題：</strong>'+escapeHtml(item['問題說明'])+'<br><strong>原狀態：</strong>'+escapeHtml(oldStatus)+'　→　<strong>預備狀態：</strong>'+escapeHtml(nextStatus);show('selectedInfo');show('editArea');document.getElementById('selectedInfo').scrollIntoView({behavior:'smooth',block:'center'})}
+function selectCase(index){const item=cases[index];if(item)selectItem(item)}
+function selectItem(item){
+  const oldStatus=item['狀態']||'待處理',nextStatus=oldStatus==='待處理'?'處理中':oldStatus;
+  document.getElementById('caseId').value=item['報修編號']||'';document.getElementById('status').value=nextStatus;document.getElementById('owner').value=item['負責人']||'';document.getElementById('dueDate').value=toDate(item['預定完成日']);document.getElementById('note').value=item['備註']||'';
+  const x=document.getElementById('selectedInfo');x.innerHTML='<strong>已選擇案件：</strong>'+escapeHtml(item['報修編號'])+'<br><strong>地點：</strong>'+escapeHtml(item['地點'])+'<br><strong>問題：</strong>'+escapeHtml(item['問題說明'])+'<br><strong>原狀態：</strong>'+escapeHtml(oldStatus)+'　→　<strong>預備狀態：</strong>'+escapeHtml(nextStatus);
+  show('selectedInfo');show('editArea');document.getElementById('selectedInfo').scrollIntoView({behavior:'smooth',block:'center'})
+}
 function toDate(v){const m=String(v||'').match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);return m?m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0'):''}
 function quickUpdate(st){if(!document.getElementById('caseId').value){box('updateResult','請先選擇案件。','error');return}document.getElementById('status').value=st;if(st==='已完成'&&!document.getElementById('note').value)document.getElementById('note').value='已完成處理。';updateCase()}
-function updateCase(){const payload={caseId:document.getElementById('caseId').value,status:document.getElementById('status').value,owner:document.getElementById('owner').value,dueDate:document.getElementById('dueDate').value,note:document.getElementById('note').value};const btn=document.getElementById('updateBtn');btn.disabled=true;btn.textContent='更新中…';google.script.run.withSuccessHandler(function(res){btn.disabled=false;btn.textContent='更新案件';box('updateResult',res.message||'案件已更新。','success');loadCases();if(!document.getElementById('statsResult').classList.contains('hidden'))loadStats();}).withFailureHandler(function(err){btn.disabled=false;btn.textContent='更新案件';fail('updateResult',err)}).adminUpdateRepair(token,payload)}
-function deleteTestCase(){const caseId=document.getElementById('caseId').value;if(!caseId){box('updateResult','請先選擇要刪除的測試案件。','error');return}const ok=confirm('確定要刪除測試案件 '+caseId+' 嗎？\n此動作會刪除 Google Sheet 該列資料，並將照片移到 Google Drive 垃圾桶。');if(!ok)return;const text=prompt('請輸入「刪除」或 DELETE 以確認刪除測試案件：');if(text===null)return;google.script.run.withSuccessHandler(function(res){box('updateResult',res.message||'測試案件已刪除。','success');hide('selectedInfo');hide('editArea');loadCases();if(!document.getElementById('statsResult').classList.contains('hidden'))loadStats();}).withFailureHandler(function(err){fail('updateResult',err)}).adminDeleteTestRepair(token,caseId,text)}
+function updateCase(){const payload={caseId:document.getElementById('caseId').value,status:document.getElementById('status').value,owner:document.getElementById('owner').value,dueDate:document.getElementById('dueDate').value,note:document.getElementById('note').value};const btn=document.getElementById('updateBtn');btn.disabled=true;btn.textContent='更新中…';google.script.run.withSuccessHandler(function(res){btn.disabled=false;btn.textContent='更新案件';box('updateResult',res.message||'案件已更新。','success');loadCases();if(!document.getElementById('analysisPanel').classList.contains('hidden')){analysisLoaded=false;loadAnalysis();}}).withFailureHandler(function(err){btn.disabled=false;btn.textContent='更新案件';fail('updateResult',err)}).adminUpdateRepair(token,payload)}
+function deleteTestCase(){const caseId=document.getElementById('caseId').value;if(!caseId){box('updateResult','請先選擇要刪除的測試案件。','error');return}const ok=confirm('確定要刪除測試案件 '+caseId+' 嗎？\n此動作會刪除 Google Sheet 該列資料，並將照片移到 Google Drive 垃圾桶。');if(!ok)return;const text=prompt('請輸入「刪除」或 DELETE 以確認刪除測試案件：');if(text===null)return;google.script.run.withSuccessHandler(function(res){box('updateResult',res.message||'測試案件已刪除。','success');hide('selectedInfo');hide('editArea');selectedIds.delete(caseId);loadCases();if(!document.getElementById('analysisPanel').classList.contains('hidden')){analysisLoaded=false;loadAnalysis();}}).withFailureHandler(function(err){fail('updateResult',err)}).adminDeleteTestRepair(token,caseId,text)}
 function openPhoto(index,number){const item=cases[index];if(!item)return;google.script.run.withSuccessHandler(function(res){if(!res.success){alert(res.message);return}document.getElementById('photoImg').src=res.dataUrl;show('photoModal')}).withFailureHandler(function(err){alert(err.message||'照片讀取失敗')}).adminGetPhoto(token,item['報修編號'],number)}
 function closePhoto(){document.getElementById('photoImg').src='';hide('photoModal')}
 </script>
