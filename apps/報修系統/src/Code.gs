@@ -7,13 +7,15 @@
  * - 報修資料：Google Sheet
  * - 照片：Google Drive 私人檔案
  *
- * v1.1 極簡改善版：
+ * v1.2 案件整理／批次處理版：
  * - 問題類型新增「電梯」（前端選單處理，後端只檢查不可空白）
  * - 新增「影片連結」欄位，不直接上傳影片，避免拖慢速度
  * - 管理後台支援多狀態篩選，例如同時顯示「待處理」與「處理中」
  * - 後台畫面把「負責人」改稱「處理廠商／窗口」，資料欄位仍沿用「負責人」以相容舊資料
  * - 新增管理者刪除測試案件功能，會同步將照片移至 Google Drive 垃圾桶
  * - 管理登入 token 改用 ScriptProperties 儲存，提高穩定性
+ * - 新增 Excel 式案件整理：前端可排序、篩選、歸類
+ * - 新增多筆案件批次更新，可統一指定廠商、狀態、預定完成日與備註
  ****************************************************/
 
 const SHEET_NAME = '報修單總表';
@@ -327,6 +329,77 @@ function adminUpdateRepair(token, payload) {
   try { sendCompletionNotice_(oldItem, updated); }
   catch (error) { Logger.log('完成通知寄送失敗：' + error.message); }
   return {success: true, message: '案件已更新'};
+}
+
+function adminBatchUpdateRepairs(token, payload) {
+  requireAdmin_(token);
+  payload = payload || {};
+  const caseIds = Array.from(new Set((payload.caseIds || []).map(function(v){ return String(v || '').trim(); }).filter(Boolean)));
+  const status = String(payload.status || '').trim();
+  const owner = String(payload.owner || '').trim();
+  const dueDate = String(payload.dueDate || '').trim();
+  const note = String(payload.note || '').trim();
+
+  if (!caseIds.length) throw new Error('請至少選擇一件案件。');
+  if (caseIds.length > 100) throw new Error('一次最多批次處理 100 件案件。');
+  if (status && VALID_STATUSES.indexOf(status) < 0) throw new Error('批次狀態不正確。');
+  if (!status && !owner && !dueDate && !note) throw new Error('請至少填一項要批次更新的內容。');
+
+  const sheet = getSheet_();
+  const map = getHeaderMap_(sheet);
+  const data = sheet.getDataRange().getValues();
+  const rows = {};
+  for (let i = 1; i < data.length; i++) {
+    const id = String(data[i][map['報修編號']] || '').trim();
+    if (id) rows[id] = {rowNo: i + 1, item: rowArrayToObject_(data[0], data[i])};
+  }
+
+  const missing = caseIds.filter(function(id){ return !rows[id]; });
+  if (missing.length) throw new Error('找不到以下案件：' + missing.join('、'));
+
+  const changes = caseIds.map(function(id) {
+    const oldItem = rows[id].item;
+    const newStatus = status || String(oldItem['狀態'] || '待處理').trim() || '待處理';
+    const newOwner = owner || String(oldItem['負責人'] || '').trim();
+    const newDueDate = dueDate || String(oldItem['預定完成日'] || '').trim();
+    const oldNote = String(oldItem['備註'] || '').trim();
+    const newNote = note ? (oldNote ? oldNote + '\n' + note : note) : oldNote;
+
+    if ((newStatus === '處理中' || newStatus === '已完成') && !newOwner) {
+      throw new Error('案件 ' + id + ' 為「' + newStatus + '」，請指定處理廠商／窗口。');
+    }
+    if ((newStatus === '暫緩' || newStatus === '已完成') && !newNote) {
+      throw new Error('案件 ' + id + ' 為「' + newStatus + '」，請填寫備註。');
+    }
+
+    return {id:id,rowNo:rows[id].rowNo,oldItem:oldItem,status:newStatus,owner:newOwner,dueDate:newDueDate,note:newNote};
+  });
+
+  const now = new Date();
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+    changes.forEach(function(change) {
+      setCellByHeader_(sheet, change.rowNo, map, '狀態', change.status);
+      setCellByHeader_(sheet, change.rowNo, map, '負責人', change.owner);
+      setCellByHeader_(sheet, change.rowNo, map, '預定完成日', change.dueDate);
+      setCellByHeader_(sheet, change.rowNo, map, '備註', change.note);
+      setCellByHeader_(sheet, change.rowNo, map, '最後更新時間', now);
+      if (change.status === '已完成') setCellByHeader_(sheet, change.rowNo, map, '完成時間', change.oldItem['完成時間'] || now);
+      else if (change.oldItem['狀態'] === '已完成') setCellByHeader_(sheet, change.rowNo, map, '完成時間', '');
+      appendLog_(change.id, change.oldItem['狀態'], change.status, change.owner, change.dueDate, change.note);
+    });
+  } finally {
+    lock.releaseLock();
+  }
+
+  changes.forEach(function(change) {
+    const updated = Object.assign({}, change.oldItem, {'狀態':change.status,'負責人':change.owner,'預定完成日':change.dueDate,'備註':change.note});
+    try { sendCompletionNotice_(change.oldItem, updated); }
+    catch (error) { Logger.log('批次完成通知寄送失敗：' + change.id + ' / ' + error.message); }
+  });
+
+  return {success:true,updatedCount:changes.length,message:'已批次更新 ' + changes.length + ' 件案件。'};
 }
 
 function adminDeleteTestRepair(token, caseId, confirmText) {
